@@ -1,0 +1,207 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'set'
+
+def horizontal(work)
+  work[:nodes].each_index do |k|
+    node = work[:nodes][k]
+    node[:xo] = k
+    node[:yo] = 0
+  end
+end
+
+def vertical(work)
+  work[:nodes].each_index do |k|
+    node = work[:nodes][k]
+    node[:xo] = 0
+    node[:yo] = k
+  end
+end
+
+$algorithms = {
+  'horizontal' => method(:horizontal),
+  'vertical' => method(:vertical)
+}
+
+$INPUT = nil
+$OUTPUT = nil
+$ALGO = 'horizontal'
+$QUIET = false
+
+parser = OptionParser.new do |opts|
+  opts.summary_indent = '  '
+  opts.summary_width = 26
+  opts.banner = "Usage: diagrammatron-nodes [options]"
+  opts.separator ""
+  opts.separator "Options:"
+  opts.on('-a', '--algorithm NAME', "Node placement algoritm. Default #{$ALGO}") do |algo|
+    $ALGO = algo
+  end
+  opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+    $INPUT = filename
+  end
+  opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+    $OUTPUT = filename
+  end
+  opts.on('-q', '--quiet', 'No output except errors.') do
+    $QUIET = true
+  end
+  opts.on('-h', '--help', 'Print this help and exit.') do
+    $stdout.puts opts
+    $stdout.puts %Q(
+Algorithm names are: #{$algorithms.keys.sort.join(' ')}
+
+Input YAML file is expected to be like:
+---
+nodes:
+  - label: something
+  - label: another
+  - ignored: "Since no label. Still placed."
+  - label: "Unused and ok. Still placed."
+edges:
+  - between: [ something, another ]
+  - between: [ something, something ] # Ignored.
+  - between: [ ] # Ignored.
+  - ignored: "Since no between."
+...
+There can be other fields present but they are ignored. The nodes will
+receive values xo and yo that indicate horizontal and vertical coordinates.
+)
+    exit 0
+  end
+end
+parser.parse! ARGV
+
+unless $algorithms.has_key? $ALGO
+  $stderr.puts "Unrecognized algorithm: #{$ALGO}"
+  exit(2)
+end
+$ALGO = $algorithms[$ALGO]
+
+def load_source
+  begin
+    if $INPUT.nil?
+      src = YAML.load($stdin)
+    else
+      src = YAML.load(File.read($INPUT))
+    end
+  rescue Errno::ENOENT => e
+    $stderr.puts "Could not load #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to read #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  end
+  return src
+end
+doc = load_source
+exit(2) if doc.nil?
+
+def work_copy(src)
+  work = { :edges => [], :nodes => [] }
+  # Expected nodes, edges. Other pass-through.
+  label2idx = Hash.new
+  errors = false
+  edge_nodes = Set.new
+  edges = src.fetch('edges', [])
+  unedges = []
+  selfedges = []
+  edges.each_index do |k|
+    edge = edges[k]
+    labels = edge.fetch('between', [])
+    if labels.nil? or labels.size == 0
+      unedges.push(k)
+    elsif labels.size == 2
+      if labels.first == labels.last
+        selfedges.push(k)
+      else
+        edge_nodes.add labels.first
+        edge_nodes.add labels.last
+        work[:edges].push({ :idx => k, :between => labels })
+      end
+    else
+      $stderr.puts "Edge #{k + 1} does not have two labels in 'between'"
+      errors = true
+      next
+    end
+  end
+  labeled_nodes = Set.new
+  unlabeled = []
+  nodes = src.fetch('nodes', [])
+  nodes.each_index do |k|
+    node = nodes[k]
+    unless node.has_key? 'label'
+      unlabeled.push k
+      work[:nodes].push({ :idx => k })
+      next
+    end
+    label = node['label']
+    if label2idx.has_key?(label) and edge_nodes.has_key? label
+      $stderr.puts "Edge-referred label used twice: #{label}"
+      errors = true
+    end
+    label2idx[label] = k
+    labeled_nodes.add = label
+    work[:nodes].push({ :idx => k, :label => label })
+  end
+  missing = edge_nodes - labeled_nodes
+  unless missing.empty?
+    $stderr.puts "Edges refer to missing node labels: #{missing.to_a.join(' ')}"
+    errors = true
+  end
+  return nil if errors
+  unused = labeled_nodes - edge_nodes
+  [ [ unused.to_a, 'unconnected labeled nodes' ],
+    [ unlabeled, 'unlabeled nodes' ],
+    [ selfedges, 'edges from node to itself' ],
+    [ unedges, 'edges without end-points' ]
+  ].each do |x|
+    next if $QUIET or x.first.empty?
+    $stderr.puts("Note, #{x.last}: #{x.first.join(' ')}")
+  end
+  work[:edges].each do |edge|
+    edge[:between].first = label2idx[edge[:between].first]
+    edge[:between].last = label2idx[edge[:between].last]
+    edge[:between].reverse! if edge[:between].last < edge[:between].first
+  end
+  return work
+end
+begin
+  work = work_copy(doc)
+rescue StandardError
+  work = nil
+  $stderr.puts "Error processing input."
+end
+exit(3) if work.nil?
+
+# Place nodes.
+$ALGO.call(work)
+
+def prepare_output(doc, work)
+  work[:nodes].each do |node|
+    doc['nodes'][node[:idx]]['xo'] = node[:xo]
+    doc['nodes'][node[:idx]]['yo'] = node[:yo]
+  end
+end
+prepare_output(doc, work)
+
+begin
+  if $OUTPUT.nil?
+    $stdout.puts YAML.dump(doc)
+  else
+    fp = Pathname.new $OUTPUT
+    fp.open('w') do |f|
+      f.puts YAML.dump(doc)
+    end
+  end
+rescue StandardError => e
+  $stderr.puts e.to_s
+  $stderr.puts "Failed to write output: #{$OUTPUT}"
+  exit 4
+end

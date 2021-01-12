@@ -1,0 +1,25 @@
+####COMMAND Empty piped input
+####CODE 3
+####OUT
+####ERR
+Error processing input.
+####COMMAND Empty file input
+####CODE 3
+####OUT
+####ERR
+Error processing input.
+####COMMAND Missing input file
+####CODE 2
+####OUT
+####ERR
+Could not load tmp
+####COMMAND Bad piped input
+####CODE 3
+####OUT
+####ERR
+Error processing input.
+####COMMAND Unrecognized algorithm
+####CODE 2
+####OUT
+####ERR
+Unrecognized algorithm: unknown
