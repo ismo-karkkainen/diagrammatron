@@ -1,0 +1,57 @@
+####COMMAND One node graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 0
+####ERR
+Note, unconnected labeled nodes: one
+####COMMAND Node missing a label
+####CODE 0
+####OUT
+---
+nodes:
+- label: unused
+  xo: 0
+  yo: 0
+- missing: label
+  xo: 0
+  yo: 1
+####ERR
+Note, unconnected labeled nodes: unused
+Note, unlabeled nodes: 1
+####COMMAND Missing node and too few/many end-points
+####CODE 3
+####OUT
+####ERR
+Edge 1 does not have two labels in 'between'
+Edge 3 does not have two labels in 'between'
+####COMMAND Various edges
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 0
+- label: unconnected
+  xo: 0
+  yo: 1
+- label: two
+  xo: 0
+  yo: 2
+edges:
+- between:
+  - one
+  - one
+- ignored: betweenless
+- between: []
+- between:
+  - one
+  - two
+####ERR
+Note, unconnected labeled nodes: unconnected
+Note, edges from node to itself: 0
+Note, edges without end-points: 1 2
