@@ -6,6 +6,7 @@ nodes:
 - label: one
   xo: 0
   yo: 0
+  sid: 0
 ####ERR
 Note, unconnected labeled nodes: one
 ####COMMAND Node missing a label
@@ -16,9 +17,11 @@ nodes:
 - label: unused
   xo: 0
   yo: 0
+  sid: 0
 - missing: label
   xo: 0
   yo: 1
+  sid: 0
 ####ERR
 Note, unconnected labeled nodes: unused
 Note, unlabeled nodes: 1
@@ -36,12 +39,15 @@ nodes:
 - label: one
   xo: 0
   yo: 0
+  sid: 0
 - label: unconnected
   xo: 0
   yo: 1
+  sid: 0
 - label: two
   xo: 0
   yo: 2
+  sid: 0
 edges:
 - between:
   - one

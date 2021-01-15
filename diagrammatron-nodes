@@ -12,6 +12,7 @@ def horizontal(work)
     node = work[:nodes][k]
     node[:xo] = k
     node[:yo] = 0
+    node[:sid] = 0
   end
 end
 
@@ -20,17 +21,125 @@ def vertical(work)
     node = work[:nodes][k]
     node[:xo] = 0
     node[:yo] = k
+    node[:sid] = 0
+  end
+end
+
+def shortest_paths(work)
+  # https://en.wikipedia.org/wiki/Floyd–Warshall_algorithm
+  dists = Hash.new(Float::INFINITY)
+  work[:edges].each do |edge|
+    edge = edge[:between]
+    dists[edge] = 1
+    dists[edge.reverse] = 1
+  end
+  nodes = work[:nodes]
+  nodes.each_index do |k|
+    dists[[k, k]] = 0
+  end
+  nodes.each_index do |k|
+    nodes.each_index do |i|
+      nodes.each_index do |j|
+        idx = [i, j]
+        cand = dists[[i, k]] + dists[[k, j]]
+        if cand < dists[idx]
+          dists[idx] = cand
+        end
+      end
+    end
+  end
+  return dists
+end
+
+def pathlength2coordinates(work)
+  dists = shortest_paths(work)
+  # Split to connected subsets.
+  used = Set.new
+  subsets = []
+  work[:nodes].each_index do |k|
+    next if used.include? k
+    subset = Set[k]
+    used.add k
+    work[:nodes].each_index do |n|
+      next if k == n
+      next if dists[[k, n]] == Float::INFINITY
+      subset.add n
+      used.add n
+    end
+    subsets.push(subset.to_a)
+  end
+  subsets.each_index do |subset_index|
+    subset = subsets[subset_index]
+    if subset.size < 3
+      work[:nodes][subset[0]][:sid] = subset_index
+      work[:nodes][subset[0]][:xo] = 0
+      work[:nodes][subset[0]][:yo] = 0
+      if subset.size == 2
+        work[:nodes][subset[1]][:sid] = subset_index
+        work[:nodes][subset[1]][:xo] = 1
+        work[:nodes][subset[1]][:yo] = 0
+      end
+      next
+    end
+    # Subset distances.
+    sd = Hash.new
+    subset.each_index do |k|
+      subset.each_index do |n|
+        sd[[k, n]] = dists[[subset[k], subset[n]]]
+      end
+    end
+    # Use distances as coordinates.
+    # Find pair for which there are most unique coordinate pairs.
+    maxpair = nil
+    maxuniques = nil
+    subset.each_index do |k|
+      subset.each_index do |n|
+        next if n <= k # Same pair in different direction swaps coordinates.
+        uniques = Hash.new(0)
+        subset.each_index do |p|
+          idx = [sd[[k, p]], sd[[n, p]]]
+          uniques[idx] = uniques[idx] + 1
+        end
+        better = false
+        compares = (maxuniques.nil? ? 0 : maxuniques.size) <=> uniques.size
+        if compares < 0
+          better = true
+        elsif compares == 0
+          # We want to avoid lots of nodes in the same location.
+          compares = uniques.values.max <=> maxuniques.values.max
+          if compares < 0
+            better = true
+          elsif compares == 0
+            # This could be better main tie-breaker than simple maximum.
+            compares = uniques.values.sum { |v| v * v }
+            better = compares < maxuniques.values.sum { |v| v * v }
+          end
+        end
+        if better
+          maxcover = uniques.keys.size
+          maxuniques = uniques
+          maxpair = [k, n]
+        end
+      end
+    end
+    subset.each_index do |p|
+      work[:nodes][subset[p]][:sid] = subset_index
+      work[:nodes][subset[p]][:xo] = sd[[maxpair[0], p]]
+      work[:nodes][subset[p]][:yo] = sd[[maxpair[1], p]]
+    end
+    # Placing separate subsets in relation to each other is done separately.
   end
 end
 
 $algorithms = {
   'horizontal' => method(:horizontal),
+  'pathlength' => method(:pathlength2coordinates),
   'vertical' => method(:vertical)
 }
 
 $INPUT = nil
 $OUTPUT = nil
-$ALGO = 'horizontal'
+$ALGO = 'pathlength'
 $QUIET = false
 
 parser = OptionParser.new do |opts|
@@ -187,6 +296,7 @@ def prepare_output(doc, work)
   work[:nodes].each do |node|
     doc['nodes'][node[:idx]]['xo'] = node[:xo]
     doc['nodes'][node[:idx]]['yo'] = node[:yo]
+    doc['nodes'][node[:idx]]['sid'] = node[:sid]
   end
 end
 prepare_output(doc, work)

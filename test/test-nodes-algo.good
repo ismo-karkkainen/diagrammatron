@@ -1,0 +1,123 @@
+####COMMAND Two node graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 0
+  sid: 0
+- label: two
+  xo: 1
+  yo: 0
+  sid: 0
+edges:
+- between:
+  - one
+  - two
+####ERR
+####COMMAND Two node unconnected graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 0
+  sid: 0
+- label: two
+  xo: 0
+  yo: 0
+  sid: 1
+####ERR
+Note, unconnected labeled nodes: one two
+####COMMAND Three node split graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 0
+  sid: 0
+- label: two
+  xo: 1
+  yo: 0
+  sid: 0
+- label: three
+  xo: 0
+  yo: 0
+  sid: 1
+edges:
+- between:
+  - one
+  - two
+####ERR
+Note, unconnected labeled nodes: three
+####COMMAND Three node graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 1
+  sid: 0
+- label: two
+  xo: 1
+  yo: 0
+  sid: 0
+- label: three
+  xo: 1
+  yo: 2
+  sid: 0
+edges:
+- between:
+  - one
+  - two
+- between:
+  - one
+  - three
+####ERR
+####COMMAND Five node graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  xo: 0
+  yo: 1
+  sid: 0
+- label: two
+  xo: 1
+  yo: 0
+  sid: 0
+- label: three
+  xo: 1
+  yo: 2
+  sid: 0
+- label: four
+  xo: 2
+  yo: 1
+  sid: 0
+- label: five
+  xo: 3
+  yo: 2
+  sid: 0
+edges:
+- between:
+  - one
+  - two
+- between:
+  - one
+  - three
+- between:
+  - four
+  - three
+- between:
+  - four
+  - five
+- between:
+  - four
+  - two
+####ERR
