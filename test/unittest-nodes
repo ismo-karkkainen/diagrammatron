@@ -1,0 +1,129 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+$unit_test = 0
+load '../diagrammatron-nodes'
+
+$context = ''
+def assert(condition, message, extra = nil)
+  $stdout.puts "#{$context}: #{message}: #{condition ? 'ok' : 'fail'}"
+  $stderr.puts(extra) unless condition or extra.nil?
+  $unit_test = 1 unless condition
+  return condition
+end
+
+
+$context = 'shortest_paths'
+dists = shortest_paths({
+  :nodes => [
+    { :idx => 0 },
+    { :idx => 1 },
+    { :idx => 2 },
+    { :idx => 3 }
+  ],
+  :edges => [
+    { :between => [ 0, 1] },
+    { :between => [ 1, 2] }
+  ]
+})
+vals = [ 0, 1, 2, Float::INFINITY ]
+vals.each_index do |k|
+  assert(dists[[0, k]] == vals[k], "0 and #{k} distance is #{vals[k]}", dists[[0, k]])
+end
+(0..3).each do |k|
+  assert(dists[[k, k]] == 0, "Distance to self is 0 for #{k}", dists[[k, k]])
+end
+(1..3).each do |k|
+  (0...k).each do |n|
+    assert(dists[[k, n]] == dists[[n, k]],
+      "dists[[#{k}, #{n}]] == dists[[#{n}, #{k}]]",
+      "#{dists[[k, n]]} != #{dists[[n, k]]}")
+  end
+end
+
+$context = 'separate_subdiagrams'
+work = { 
+  :nodes => [
+    { :idx => 0 },
+    { :idx => 1 },
+    { :idx => 2 },
+    { :idx => 3 },
+    { :idx => 4 },
+    { :idx => 5 }
+  ],
+  :edges => [
+    { :between => [ 0, 1] },
+    { :between => [ 1, 2] },
+    { :between => [ 4, 5] }
+  ]
+}
+dists = shortest_paths(work)
+subsets = separate_subdiagrams(work, dists)
+if assert(subsets.size == 3, "3 subsets", subsets)
+  assert(subsets[0] == [ 0, 1, 2 ], "Nodes 0, 1, 2", subsets[0])
+  assert(subsets[1] == [ 3 ], "Node 3", subsets[1])
+  assert(subsets[2] == [ 4, 5 ], "Nodes 4 and 5", subsets[2])
+end
+work1 = { 
+  :nodes => [
+    { :idx => 0 }
+  ],
+  :edges => []
+}
+dists1 = shortest_paths(work1)
+assert(dists1[[0, 0]] == 0, "Self-distance 0", dists1[[0, 0]])
+
+$context = 'place_subset'
+place_subset(work1, dists1, [ 0 ], 0)
+assert(work1[:nodes][0][:xo] == 0, "Singleton x to 0", work1[:nodes][0][:xo])
+assert(work1[:nodes][0][:yo] == 0, "Singleton y to 0", work1[:nodes][0][:yo])
+assert(work1[:nodes][0][:sid] == 0, "Singleton sid to 0", work1[:nodes][0][:sid])
+place_subset(work, dists, [ 0, 1 ], 0)
+assert(work[:nodes][1][:xo] == 1, "Second x to 1", work[:nodes][1][:xo])
+assert(work[:nodes][1][:yo] == 0, "Second y to 0", work[:nodes][1][:yo])
+assert(work[:nodes][1][:sid] == 0, "Second sid to 0", work[:nodes][1][:sid])
+
+$context = 'coordinate_collisions'
+work = { 
+  :nodes => [
+    { :idx => 0, :xo => 0, :yo => 0 },
+    { :idx => 1, :xo => 1, :yo => 0 },
+    { :idx => 2, :xo => 2, :yo => 0 },
+    { :idx => 3, :xo => 1, :yo => 0 },
+    { :idx => 4, :xo => 2, :yo => 0 },
+    { :idx => 5, :xo => 2, :yo => 0 }
+  ]
+}
+c = coordinate_collisions(work, [ 0, 1, 2, 3, 4, 5 ])
+assert(c[[0, 0]] == [ 0 ], "(0, 0) node 0", c[[0, 0]])
+assert(c[[1, 0]] == [ 1, 3 ], "(1, 0) nodes 1, 3", c[[1, 0]])
+assert(c[[2, 0]] == [ 2, 4, 5 ], "(2, 0) nodes 2, 4, 5", c[[2, 0]])
+
+$context = 'shifts'
+xs1, ys1 = shifts(1)
+xs8, ys8 = shifts(8)
+assert(0 == (xs1 <=> xs8), "x-shifts for 8 and 1 equal", [ xs1, xs8 ])
+assert(0 == (ys1 <=> ys8), "y-shifts for 8 and 1 equal", [ ys1, ys8 ])
+assert(0 == (xs1 <=> [ -1, 0, 1, 2, 1, 0, -1, -2 ]), "x-shifts as planned", xs1)
+assert(0 == (ys1 <=> [ 1, 2, 1, 0, -1, -2, -1, 0 ]), "y-shifts as planned", ys1)
+
+$context = 'remap'
+work = {
+  :nodes => [
+    { :xo => 6 },
+    { :xo => 3 },
+    { :xo => 8 },
+    { :xo => 3 },
+    { :xo => 6 }
+  ]
+}
+remap(work, [ 0, 1, 2, 3 ], :xo)
+assert(work[:nodes][0][:xo] == 1, "6 -> 1", work[:nodes][0][:xo])
+assert(work[:nodes][1][:xo] == 0, "3 -> 0", work[:nodes][1][:xo])
+assert(work[:nodes][2][:xo] == 2, "8 -> 2", work[:nodes][2][:xo])
+assert(work[:nodes][3][:xo] == 0, "3 -> 0", work[:nodes][3][:xo])
+assert(work[:nodes][4][:xo] == 6, "6 unchanged", work[:nodes][4][:xo])
+
+exit $unit_test
