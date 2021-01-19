@@ -4,11 +4,11 @@
 ---
 nodes:
 - label: one
-  xo: 1
+  xo: 0
   yo: 2
   sid: 0
 - label: two
-  xo: 3
+  xo: 1
   yo: 1
   sid: 0
 - label: three
@@ -16,23 +16,23 @@ nodes:
   yo: 4
   sid: 0
 - label: four
-  xo: 5
+  xo: 1
   yo: 0
   sid: 0
 - label: five
-  xo: 3
+  xo: 1
   yo: 4
   sid: 0
 - label: six
-  xo: 5
+  xo: 1
   yo: 2
   sid: 0
 - label: seven
-  xo: 2
+  xo: 0
   yo: 5
   sid: 0
 - label: eight
-  xo: 4
+  xo: 1
   yo: 3
   sid: 0
 edges:

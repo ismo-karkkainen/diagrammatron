@@ -160,6 +160,87 @@ def spread(work, indexes)
   end
 end
 
+def uniques(nodes, subset, key, ortho)
+  u = Hash.new
+  subset.each do |p|
+    c = nodes[p][key]
+    u[c] = [] unless u.has_key? c
+    u[c].push(nodes[p][ortho])
+  end
+  u.each_value { |v| v.sort! }
+  return u
+end
+
+def overlap(a, b)
+  seen = Set.new(a)
+  b.each do |v|
+    return true if seen.add?(v).nil?
+  end
+  return false
+end
+
+def combinable(coords)
+  c = Hash.new
+  ordered = coords.keys.sort
+  ordered.each_index do |k|
+    n = k + 1
+    break if n == ordered.size
+    next if overlap(coords[ordered[k]], coords[ordered[n]])
+    c[ordered[k]] = {
+      :size => coords[ordered[k]].size + coords[ordered[n]].size,
+      :next => ordered[n]
+    }
+  end
+  return c
+end
+
+def find_shortest(combinables)
+  cand = nil
+  combinables.each_pair do |coord, v|
+    cand = coord if cand.nil? or v[:size] < combinables[cand][:size]
+  end
+  return cand
+end
+
+def combine(work, subset, coord, eliminated, key)
+  subset.each do |p|
+    node = work[:nodes][p]
+    next unless node[key] == eliminated
+    node[key] = coord
+  end
+end
+
+def reduce(work, subset)
+  # Loop checking both directions until there is nothing to combine.
+  while true
+    cx = combinable(uniques(work[:nodes], subset, :xo, :yo))
+    cy = combinable(uniques(work[:nodes], subset, :yo, :xo))
+    # To avoid rows/columns with few nodes, take shortest combination first.
+    xcand = find_shortest(cx)
+    ycand = find_shortest(cy)
+    cand = nil
+    c = nil
+    key = nil
+    if xcand.nil?
+      break if ycand.nil?
+      cand = ycand
+      c = cy
+      key = :yo
+    else
+      if ycand.nil? or cy[ycand][:size] <= cx[xcand][:size]
+        cand = xcand
+        c = cx
+        key = :xo
+      else
+        cand = xcand
+        c = cx
+        key = :xo
+      end
+    end
+    combine(work, subset, cand, c[cand][:next], key)
+  end
+end
+
 def remap(work, subset, key)
   coords = Set.new
   subset.each { |p| coords.add(work[:nodes][p][key]) }
@@ -187,10 +268,11 @@ def pathlength2coordinates(work)
       next unless indexes.size > 1
       spread(work, indexes)
     end
+    reduce(work, subset)
     remap(work, subset, :xo)
     remap(work, subset, :yo)
-    # Placing separate subsets in relation to each other is done separately.
   end
+  # Placing separate subsets in relation to each other is done separately.
 end
 
 $algorithms = {
