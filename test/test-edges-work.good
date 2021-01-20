@@ -1,0 +1,71 @@
+####COMMAND One node graph without sid
+####CODE 3
+####OUT
+####ERR
+Node without sid: one
+####COMMAND One node graph without coordinates
+####CODE 3
+####OUT
+####ERR
+Node without xo or yo: one
+####COMMAND One node graph without yo
+####CODE 3
+####OUT
+####ERR
+Node without xo or yo: one
+####COMMAND Node missing a label
+####CODE 0
+####OUT
+---
+nodes:
+- label: unused
+  sid: 0
+  xo: 0
+  yo: 0
+- sid: 0
+  xo: 0
+  yo: 0
+####ERR
+Note, unconnected labeled nodes: unused
+Note, unlabeled nodes: 1
+####COMMAND Missing node and too few/many end-points
+####CODE 3
+####OUT
+####ERR
+Edge 1 does not have two labels in 'between'
+Edge 3 does not have two labels in 'between'
+####COMMAND Various edges
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  sid: 0
+  xo: 0
+  yo: 0
+- label: unconnected
+  sid: 1
+  xo: 0
+  yo: 0
+- label: two
+  sid: 0
+  xo: 2
+  yo: 0
+edges:
+- between:
+  - one
+  - one
+- ignored: betweenless
+- between: []
+- between:
+  - one
+  - two
+  path:
+  - xo: 0
+    yo: 0.5
+  - xo: 2
+    yo: 0.5
+####ERR
+Note, unconnected labeled nodes: unconnected
+Note, edges from node to itself: 0
+Note, edges without end-points: 1 2

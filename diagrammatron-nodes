@@ -330,10 +330,10 @@ def work_copy(src)
   unlabeled = []
   nodes = src.fetch('nodes', [])
   nodes.each_index do |k|
+    work[:nodes].push({ :idx => k })
     node = nodes[k]
     unless node.has_key? 'label'
       unlabeled.push k
-      work[:nodes].push({ :idx => k })
       next
     end
     label = node['label']
@@ -343,7 +343,6 @@ def work_copy(src)
     end
     label2idx[label] = k
     labeled_nodes.add label
-    work[:nodes].push({ :idx => k, :label => label })
   end
   missing = edge_nodes - labeled_nodes
   unless missing.empty?

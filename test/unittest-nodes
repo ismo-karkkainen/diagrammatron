@@ -8,7 +8,7 @@ load '../diagrammatron-nodes'
 
 $context = ''
 def assert(condition, message, extra = nil)
-  $stdout.puts "#{$context}: #{message}: #{condition ? 'ok' : 'fail'}"
+  $stdout.puts "#{condition ? 'ok' : 'fail'}: #{$context}: #{message}"
   $stderr.puts(extra) unless condition or extra.nil?
   $unit_test = 1 unless condition
   return condition

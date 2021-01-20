@@ -1,0 +1,151 @@
+####COMMAND L graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  sid: 0
+  xo: 0
+  yo: 0
+- label: two
+  sid: 0
+  xo: 2
+  yo: 0
+- label: three
+  sid: 0
+  xo: 0
+  yo: 2
+edges:
+- between:
+  - one
+  - three
+  path:
+  - xo: 0.5
+    yo: 0
+  - xo: 0.5
+    yo: 2
+- between:
+  - three
+  - two
+  path:
+  - xo: 0
+    yo: 2.5
+  - xo: 2.5
+    yo: 2.5
+  - xo: 2.5
+    yo: 0
+- between:
+  - one
+  - two
+  path:
+  - xo: 0
+    yo: 0.5
+  - xo: 2
+    yo: 0.5
+####ERR
+####COMMAND T graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  sid: 0
+  xo: 0
+  yo: 0
+- label: two
+  sid: 0
+  xo: 2
+  yo: 2
+- label: three
+  sid: 0
+  xo: 4
+  yo: 0
+edges:
+- between:
+  - one
+  - three
+  path:
+  - xo: 0
+    yo: 0.3333333333333333
+  - xo: 4
+    yo: 0.3333333333333333
+- between:
+  - three
+  - two
+  path:
+  - xo: 4
+    yo: 0.6666666666666666
+  - xo: 2.6666666666666665
+    yo: 0.6666666666666666
+  - xo: 2.6666666666666665
+    yo: 2
+- between:
+  - one
+  - two
+  path:
+  - xo: 0
+    yo: 0.6666666666666666
+  - xo: 2.3333333333333335
+    yo: 0.6666666666666666
+  - xo: 2.3333333333333335
+    yo: 2
+####ERR
+####COMMAND Line graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  sid: 0
+  xo: 0
+  yo: 0
+- label: two
+  sid: 0
+  xo: 2
+  yo: 0
+- label: three
+  sid: 0
+  xo: 4
+  yo: 0
+edges:
+- between:
+  - one
+  - three
+  path:
+  - xo: 0.6666666666666666
+    yo: 0
+  - xo: 0.6666666666666666
+    yo: 1.3333333333333333
+  - xo: 4.333333333333333
+    yo: 1.3333333333333333
+  - xo: 4.333333333333333
+    yo: 0
+- between:
+  - three
+  - two
+  path:
+  - xo: 4
+    yo: 0.5
+  - xo: 2
+    yo: 0.5
+- between:
+  - two
+  - one
+  path:
+  - xo: 2
+    yo: 0.5
+  - xo: 0
+    yo: 0.5
+- between:
+  - three
+  - one
+  path:
+  - xo: 4.666666666666667
+    yo: 0
+  - xo: 4.666666666666667
+    yo: 1.6666666666666665
+  - xo: 0.3333333333333333
+    yo: 1.6666666666666665
+  - xo: 0.3333333333333333
+    yo: 0
+####ERR

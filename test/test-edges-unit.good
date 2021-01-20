@@ -1,0 +1,126 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: edge_subsets: Subsets 0 and 1
+ok: Segment reverse: Retains vertical
+ok: Segment reverse: Retains constant coordinate
+ok: Segment reverse: Range reversed
+ok: Segment reverse: Reverse at node
+ok: Segment reverse: Segment index changed
+ok: Segment direction: Segment is nil
+ok: Segment direction: Earlier segment from left is decreasing
+ok: Segment direction: Previous from preceding segment, increasing
+ok: Segment direction: Earlier segment from right is increasing
+ok: Segment direction: Previous from preceding segment, increasing
+ok: Segment direction: Later segment increasing
+ok: Segment direction: Previous from succeeding segment, decreasing
+ok: Segment direction: Later segment decreasing
+ok: Segment direction: Previous from succeeding segment, decreasing
+ok: Segment over_other_node: Node outside vertical
+ok: Segment over_other_node: Node outside horizontal
+ok: Segment over_other_node: Node at vertical start, at node
+ok: Segment over_other_node: Node at vertical end
+ok: Segment over_other_node: Node at horizontal end, at node
+ok: Segment over_other_node: Node overlaps vertical middle
+ok: Segment over_other_node: Node overlaps horizontal middle
+ok: Segment cross: Before and left not crossed
+ok: Segment cross: Before and right not crossed
+ok: Segment cross: After and left not crossed
+ok: Segment cross: After and right not crossed
+ok: Segment cross: Crosses
+ok: Segment cross: Reverse crosses
+ok: Segment cross: To right
+ok: Segment cross: To left
+ok: Segment cross: Above
+ok: Segment cross: Below
+ok: Segment length: Length
+ok: Segment length: Length reverse
+ok: Segment range_overlap: Overlaps itself
+ok: Segment range_overlap: Overlaps when same coordinate
+ok: Segment range_overlap: No overlap when to left
+ok: Segment range_overlap: Overlaps when same coordinate 2
+ok: Segment range_overlap: No overlap when to right
+ok: overlaps_set: Overlaps on touch
+ok: overlaps_set: No overlap
+ok: segment: Vertical
+ok: segment: cc 0
+ok: segment: Range 1, 2
+ok: segment: Edge index 0
+ok: segment: Segment does not end at node
+ok: segment: Segment index 0
+ok: segment: Horizontal
+ok: segment: cc 2
+ok: segment: Range 0, 1
+ok: Path: Edge index 3
+ok: Path push: Edge index set
+ok: Path push: One segment present
+ok: Path push: Two segments
+ok: Path end_segments: Global has path set
+ok: Path end_segments: Path has unique id
+ok: Path end_segments: First segment from start
+ok: Path end_segments: Second segment from start
+ok: Path end_segments: First segment from end with range and ends reversed
+ok: Path end_segments: Second segment from end with range and ends reversed
+ok: Path segment_directions: First segment
+ok: Path segment_directions: Nothing before
+ok: Path segment_directions: After increases
+ok: Path segment_directions: Second segment
+ok: Path segment_directions: Before increases
+ok: Path segment_directions: Nothing after
+ok: Path over_other_node: Segment 0 end 0 at node: true
+ok: Path over_other_node: Segment 0 end 1 at node: false
+ok: Path over_other_node: Segment 1 end 0 at node: false
+ok: Path over_other_node: Segment 1 end 1 at node: true
+ok: Path over_other_node: Node at start and end
+ok: Path over_other_node: First segment up
+ok: Path over_other_node: Last segment left
+ok: Path over_other_node: Empty crosses set
+ok: Path cross: Vertical crosses horizontal
+ok: Path cross: Verticals do not cross
+ok: Path store_crossings: No crossings
+ok: Path store_crossings: Crossing
+ok: Path store_crossings: Crossed id
+ok: Path store_crossings: Crosser id
+ok: condidates: 3 candidates
+ok: condidates: 2 candidates
+ok: condidates: 3 candidates
+ok: condidates: 12 candidates
+ok: condidates: 15 candidates
+ok: keep_direct_and_singletons: Direct remains
+ok: keep_direct_and_singletons: One segment path
+ok: keep_direct_and_singletons: No changes
+ok: keep_direct_and_singletons: Single remains
+ok: keep_direct_and_singletons: Not direct
+ok: store_crossings: One crossed
+ok: store_crossings: Vertical crossed
+ok: store_crossings: One crossed
+ok: store_crossings: Vertical crossed
+ok: store_crossings: Two crossed
+ok: store_crossings: Horizontal crossed
+ok: store_crossings: Horizontal second crossed
+ok: keep_least_crossing: Chose non-crossing 3-segment path
+ok: keep_least_crossing: Chose non-crossing 5-segment path
+ok: keep_least_crossing: Chose non-crossing 1-segment path
+ok: keep_least_crossing: Chose non-crossing 1-segment reverse path
+ok: node_and_side_sets: 0 leaves right
+ok: node_and_side_sets: 1 enters right
+ok: node_and_side_sets: 0 leaves down
+ok: node_and_side_sets: 1 enters down
+ok: node_and_side_sets: 2 leaves right
+ok: node_and_side_sets: 2 enters right
+ok: node_and_side_sets: 3 enters left
+ok: node_and_side_sets: 3 leaves left
+ok: segment_order: Smaller group first
+ok: segment_order: Greater group last
+ok: segment_order: Shorter first in group 0
+ok: segment_order: Lower first if same length in group 0
+ok: segment_order: Smaller edge index first, group 0
+ok: segment_order: Lower first in group 1
+ok: segment_order: Shorter first in group 1
+ok: segment_order: Smaller edge index first, group 1
+ok: segment_order: Higher end first in group 2
+ok: segment_order: Longer first in group 2
+ok: segment_order: Smaller edge index first, group 2
+ok: segment_order: Longer first in group 3
+ok: segment_order: Higher end first in group 3
+####ERR

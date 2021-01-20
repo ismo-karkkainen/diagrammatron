@@ -1,0 +1,681 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'set'
+
+def load_source
+  begin
+    if $INPUT.nil?
+      src = YAML.load($stdin)
+    else
+      src = YAML.load(File.read($INPUT))
+    end
+  rescue Errno::ENOENT => e
+    $stderr.puts "Could not load #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to read #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  end
+  return src
+end
+
+def work_copy(src)
+  work = { :edges => {}, :nodes => [] }
+  # Expected nodes, edges. Other pass-through.
+  label2idx = Hash.new
+  errors = false
+  edge_nodes = Set.new
+  edges = src.fetch('edges', [])
+  unedges = []
+  selfedges = []
+  edges.each_index do |k|
+    edge = edges[k]
+    labels = edge.fetch('between', [])
+    if labels.nil? or labels.size == 0
+      unedges.push(k)
+    elsif labels.size == 2
+      if labels.first == labels.last
+        selfedges.push(k)
+      else
+        edge_nodes.add labels.first
+        edge_nodes.add labels.last
+        work[:edges][k] = { :idx => k, :between => [ labels[0], labels[1] ] }
+      end
+    else
+      $stderr.puts "Edge #{k + 1} does not have two labels in 'between'"
+      errors = true
+      next
+    end
+  end
+  labeled_nodes = Set.new
+  unlabeled = []
+  nodes = src.fetch('nodes', [])
+  subsets = Hash.new
+  nodes.each_index do |k|
+    node = nodes[k]
+    unless node.has_key? 'sid'
+      $stderr.puts "Node without sid: #{node.fetch('label', k + 1)}"
+      errors = true
+      next
+    end
+    unless node.has_key?('xo') and node.has_key?('yo')
+      $stderr.puts "Node without xo or yo: #{node.fetch('label', k + 1)}"
+      errors = true
+      next
+    end
+    sid = node['sid']
+    subsets[sid] = [] unless subsets.has_key? sid
+    subsets[sid].push(k)
+    work[:nodes].push({
+      :idx => k,
+      :sid => sid,
+      :xo => node['xo'] * 2, # Make room for edge coordinates.
+      :yo => node['yo'] * 2
+    })
+    unless node.has_key? 'label'
+      unlabeled.push k
+      next
+    end
+    label = node['label']
+    if label2idx.has_key?(label) and edge_nodes.has_key? label
+      $stderr.puts "Edge-referred label used twice: #{label}"
+      errors = true
+    end
+    label2idx[label] = k
+    labeled_nodes.add label
+  end
+  missing = edge_nodes - labeled_nodes
+  unless missing.empty?
+    $stderr.puts "Edges refer to missing node labels: #{missing.to_a.join(' ')}"
+    errors = true
+  end
+  return nil if errors
+  unused = labeled_nodes - edge_nodes
+  [ [ unused.to_a, 'unconnected labeled nodes' ],
+    [ unlabeled, 'unlabeled nodes' ],
+    [ selfedges, 'edges from node to itself' ],
+    [ unedges, 'edges without end-points' ]
+  ].each do |x|
+    next if $QUIET or x.first.empty?
+    $stderr.puts("Note, #{x.last}: #{x.first.join(' ')}")
+  end
+  work[:edges].each_value do |edge|
+    edge[:between][0] = label2idx[edge[:between][0]]
+    edge[:between][1] = label2idx[edge[:between][1]]
+  end
+  work[:subsets] = subsets
+  return work
+end
+
+def edge_subsets(work)
+  subsets = Hash.new
+  work[:edges].each_value do |edge|
+    s = work[:nodes][edge[:between].first][:sid]
+    subsets[s] = [] unless subsets.has_key? s
+    subsets[s].push(edge[:idx])
+  end
+  return subsets
+end
+
+Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_index, :offset) do
+  def direction(s) # To decreasing or increasing coordinates.
+    return 0 if s.nil?
+    if segment_index < s.segment_index
+      return (cc < s.range[1]) ? 1 : -1
+    else
+      return (cc < s.range[0]) ? 1 : -1
+    end
+  end
+
+  def over_other_node(work, node_subset)
+    ck, rk = vertical ? [:xo, :yo] : [:yo, :xo]
+    i0, i1 = (range[0] < range[1]) ? [0, 1] : [1, 0]
+    node_subset.each do |n|
+      node = work[:nodes][n]
+      next unless cc == node[ck]
+      (0..1).each do |k|
+        return true if range[i0] < node[rk] and node[rk] < range[i1]
+        next if at_node[k]
+        return true if range[k] == node[rk]
+      end
+    end
+    return false
+  end
+
+  def cross(s)
+    return false if vertical == s.vertical
+    return false if cc <= s.range.min or s.range.max <= cc
+    return false if s.cc <= range.min or range.max <= s.cc
+    return true
+  end
+
+  def reverse(segment_idx)
+    return Segment.new(vertical, cc, range.reverse, edge_index, at_node.reverse, segment_idx)
+  end
+
+  def length
+    return (range[0] < range[1]) ? range[1] - range[0] : range[0] - range[1]
+  end
+
+  def range_overlap(s)
+    return false if range.max < s.range.min
+    return false if s.range.max < range.min
+    return true
+  end
+end
+
+def segment(x0, y0, x1, y1)
+  if x0 == x1
+    vert = true
+    cc = x0
+    range = [ y0, y1 ]
+  else
+    vert = false
+    cc = y0
+    range = [ x0, x1 ]
+  end
+  return Segment.new(vert, cc, range, 0, [false, false], 0)
+end
+
+Connection = Struct.new(:node_index, :side_index) do
+end
+
+$paths = Hash.new
+Path = Struct.new(:edge_index, :ends, :segments, :id, :crosses) do
+  def push(s)
+    self.segments = [] if segments.nil?
+    s.edge_index = edge_index
+    s.segment_index = segments.size
+    segments.push s
+    return self
+  end
+
+  def over_other_node(work, node_subset)
+    # Called after pushes so set end-point info here.
+    segments.first.at_node[0] = true
+    segments.last.at_node[1] = true
+    segments.each do |s|
+      return true if s.over_other_node(work, node_subset)
+    end
+    # Compute end-node side information.
+    dir, ck = segments.first.vertical ? [0, :yo] : [1, :xo]
+    n = work[:nodes][ends[0]]
+    dir += (segments.first.range[1] < n[ck]) ? 2 : 0
+    ends[0] = Connection.new(ends[0], dir)
+    dir, ck = segments.last.vertical ? [0, :yo] : [1, :xo]
+    n = work[:nodes][ends[1]]
+    dir += (segments.last.range[0] < n[ck]) ? 2 : 0
+    ends[1] = Connection.new(ends[1], dir)
+    self.id = $paths.size
+    self.crosses = Set.new
+    $paths[id] = self
+    return false
+  end
+
+  def cross(p)
+    segments.each do |s|
+      p.segments.each do |t|
+        return true if s.cross(t)
+      end
+    end
+    return false
+  end
+
+  def store_crossings(paths)
+    paths.each do |p|
+      next unless cross(p)
+      crosses.add p.id
+      p.crosses.add id
+    end
+  end
+
+  def end_segments(conn)
+    if conn == ends[0]
+      return [ segments[0], (segments.size > 1) ? segments[1] : nil ]
+    end
+    return [ segments.last.reverse(0), (segments.size > 1) ? segments[segments.size - 2].reverse(1) : nil ]
+  end
+
+  def segment_directions(index)
+    before = (index > 0) ? segments[index - 1] : nil
+    after = (index + 1 < segments.size) ? segments[index + 1] : nil
+    s = segments[index]
+    return [ s, s.direction(before), s.direction(after) ]
+  end
+end
+
+def candidates(node0, node1, edge_index, work, node_subset)
+  n0 = work[:nodes][node0]
+  n1 = work[:nodes][node1]
+  cands = []
+  if n0[:xo] == n1[:xo]
+    # Vertical 3 alternatives.
+    [ -1, 0, 1 ].each do |offset|
+      path = Path.new(edge_index, [node0, node1])
+      path.push(segment(n0[:xo], n0[:yo], n0[:xo] + offset, n0[:yo])) unless offset == 0
+      path.push segment(n0[:xo] + offset, n0[:yo], n0[:xo] + offset, n1[:yo])
+      path.push(segment(n0[:xo] + offset, n1[:yo], n1[:xo], n1[:yo])) unless offset == 0
+      next if path.over_other_node(work, node_subset)
+      cands.push path
+    end
+  elsif n0[:yo] == n1[:yo]
+    # Horizontal 3 alternatives.
+    [ -1, 0, 1 ].each do |offset|
+      path = Path.new(edge_index, [node0, node1])
+      path.push(segment(n0[:xo], n0[:yo], n0[:xo], n0[:yo] + offset)) unless offset == 0
+      path.push segment(n0[:xo], n0[:yo] + offset, n1[:xo], n0[:yo] + offset)
+      path.push(segment(n1[:xo], n0[:yo] + offset, n1[:xo], n1[:yo])) unless offset == 0
+      next if path.over_other_node(work, node_subset)
+      cands.push path
+    end
+  else
+    # 9 offset combinations.
+    [ -1, 0, 1 ].each do |off0|
+      [ -1, 0, 1 ].each do |off1|
+        # Vertical-horizontal.
+        path = Path.new(edge_index, [node0, node1])
+        path.push(segment(n0[:xo], n0[:yo], n0[:xo] + off0, n0[:yo])) unless off0 == 0
+        path.push segment(n0[:xo] + off0, n0[:yo], n0[:xo] + off0, n1[:yo] + off1)
+        path.push segment(n0[:xo] + off0, n1[:yo] + off1, n1[:xo], n1[:yo] + off1)
+        path.push(segment(n1[:xo], n1[:yo] + off1, n1[:xo], n1[:yo])) unless off1 == 0
+        cands.push(path) unless path.over_other_node(work, node_subset)
+        # Horizontal-vertical.
+        path = Path.new(edge_index, [node0, node1])
+        path.push(segment(n0[:xo], n0[:yo], n0[:xo], n0[:yo] + off0)) unless off0 == 0
+        path.push segment(n0[:xo], n0[:yo] + off0, n1[:xo] + off1, n0[:yo] + off0)
+        path.push segment(n1[:xo] + off1, n0[:yo] + off0, n1[:xo] + off1, n1[:yo])
+        path.push(segment(n1[:xo] + off1, n1[:yo], n1[:xo], n1[:yo])) unless off1 == 0
+        cands.push(path) unless path.over_other_node(work, node_subset)
+      end
+    end
+  end
+  return cands
+end
+
+def keep_direct_and_singletons(full)
+  full.each_pair do |edge_index, cands|
+    next if cands.size == 1
+    direct = nil
+    cands.each do |cand|
+      next if cand.segments.size != 1
+      direct = cand
+      break
+    end
+    next if direct.nil?
+    full[edge_index] = [ direct ]
+  end
+end
+
+def store_crossings(full)
+  idxs = full.keys.sort
+  (1...idxs.size).each do |k|
+    cands = full[idxs[k]]
+    (0...k).each do |n|
+      others = full[idxs[n]]
+      cands.each do |c|
+        c.store_crossings(others)
+      end
+    end
+  end
+end
+
+def keep_least_crossing(full)
+  # Compute crossing path pairs once as there will only be removals.
+  store_crossings(full)
+  while true
+    # Find candidate with most crossings and most segments.
+    # Continue until each edge has only one candidate left.
+    chosen = nil
+    full.each_pair do |edge_index, cands|
+      next if cands.size == 1
+      cands.each_index do |k|
+        if chosen.nil?
+          chosen = [ full[edge_index][k], edge_index, k ]
+          next
+        end
+        c = cands[k]
+        next if c.crosses.size < chosen.first.crosses.size
+        next if c.crosses.size == chosen.first.crosses.size and c.segments.size <= chosen.first.segments.size
+        chosen = [ c, edge_index, k ]
+      end
+    end
+    break if chosen.nil?
+    chosen.first.crosses.each do |id|
+      $paths[id].crosses.delete(chosen.first.id)
+    end
+    $paths.delete chosen.first.id
+    full[chosen[1]].delete_at(chosen[2])
+  end
+  $paths = nil
+  chosen = Hash.new
+  full.each_pair do |edge_index, cands|
+    chosen[edge_index] = cands[0]
+  end
+  return chosen
+end
+
+def node_and_side_sets(chosen)
+  nodesides = Hash.new
+  chosen.each_pair do |edge_index, path|
+    path.ends.each do |conn|
+      nodesides[conn] = nodesides.fetch(conn, []).push(path)
+    end
+  end
+  return nodesides
+end
+
+def path_order_at_side(a, b, conn)
+  # Order according to next segment (looking from node) direction -1, 0, 1.
+  # First segment length on tie. Longest to center.
+  # Second segment length on tie. Longest to center.
+  a0, a1 = a.end_segments(conn)
+  b0, b1 = b.end_segments(conn)
+  ad = a0.direction(a1)
+  bd = b0.direction(b1)
+  d = ad <=> bd
+  return d unless d == 0
+  order = (ad < 0) ? 1 : -1
+  d = a0.length <=> b0.length
+  return order * d unless d == 0
+  unless a1.nil?
+    d = a1.length <=> b1.length
+    return order * d unless d == 0
+  end
+  d = a.edge_index <=> b.edge_index
+  # Paths in opposite directions and at smaller index node get reverse order.
+  if a.ends[0].node_index == b.ends[1].node_index and a.ends[1].node_index == b.ends[0].node_index
+    c = (d < 0) ? a : b
+    if c.ends[0].node_index < c.ends[1].node_index and c.ends[0] == conn
+      return -d
+    end
+  end
+  return d
+end
+
+def segment_order(a, b)
+  d = a[1] <=> b[1]
+  return d unless d == 0
+  g = a[1]
+  a = a[0]
+  b = b[0]
+  case g
+  when 0 # Ascending on length, range minimum. =|
+    d = a.length <=> b.length
+    return d unless d == 0
+    d = a.range.min <=> b.range.min
+    return d unless d == 0
+  when 1 # Ascending on range minimum, length. -|_
+    d = a.range.min <=> b.range.min
+    return d unless d == 0
+    d = a.length <=> b.length
+    return d unless d == 0
+  when 2 # Descending on range maximum, length. _|-
+    d = b.range.max <=> a.range.max
+    return d unless d == 0
+    d = b.length <=> a.length
+    return d unless d == 0
+  when 3 # Descending on length, range maximum. |=
+    d = b.length <=> a.length
+    return d unless d == 0
+    d = b.range.max <=> a.range.max
+    return d unless d == 0
+  end
+  return a.edge_index <=> b.edge_index
+end
+
+def overlaps_set(c, others)
+  others.each do |sg|
+    return true if c.range_overlap(sg[0])
+  end
+  return false
+end
+
+def group_minimal_offsets(group)
+  return 0 if group.empty?
+  off = Hash.new
+  off[1] = []
+  cands = off.keys
+  group.each do |a|
+    fit = false
+    cands.each do |k|
+      next if overlaps_set(a[0], off[k])
+      off[k].push(a)
+      fit = true
+      break
+    end
+    next if fit
+    cands.push(cands.last + 1)
+    off[cands.last] = [ a ]
+  end
+  off.each_pair do |offset, fitting|
+    fitting.each do |sg|
+      sg[0].offset = offset
+    end
+  end
+  return off.keys.max
+end
+
+def group_stacked_offsets(group)
+  return 0 if group.empty?
+  group[0][0].offset = 1
+  (1...group.size).each do |k|
+    g = group[k][0]
+    idx = k - 1
+    g.offset = group[idx][0].offset + 1
+    while 0 <= idx
+      gx = group[idx][0]
+      if g.range_overlap(gx)
+        break unless gx.range.min < g.range.min and g.range.max < gx.range.max
+        # Fully within so there will be a crossing, so skip this and try next.
+        idx -= 1
+        next
+      end
+      g.offset = gx.offset
+      idx -= 1
+    end
+  end
+  return (group.map() { |sg| sg[0].offset }).max
+end
+
+def place_edges(work)
+  subsets = edge_subsets(work)
+  subsets.each_pair do |sid, subset|
+    full = Hash.new
+    subset.each do |edge_index|
+      link = work[:edges][edge_index][:between]
+      full[edge_index] = candidates(
+        link[0], link[1], edge_index, work, work[:subsets][sid])
+    end
+    keep_direct_and_singletons(full)
+    chosen = keep_least_crossing(full)
+    full = nil
+    # For each path, join it with node/side sub-set.
+    nodesides = node_and_side_sets(chosen)
+    nodesides.each_pair do |conn, paths|
+      paths.sort! { |a, b| path_order_at_side(a, b, conn) }
+    end
+    # If set has any direct paths, they must align with the opposing group.
+    align_pairs = Set.new
+    splits = Hash.new
+    nodesides.each_pair do |conn, paths|
+      splits[conn] = paths.size # Holds when no one-segment direct edges.
+      paths.each do |p|
+        next if p.segments.size > 1
+        align_pairs.add(
+          (p.ends[0].node_index < p.ends[1].node_index) ? p.ends : p.ends.reverse)
+        break
+      end
+    end
+    align_pairs.each do |pair|
+      # We need the direct count + maxima of bent edges on each side.
+      downs = []
+      ups = []
+      direct = 0
+      pair.each do |conn|
+        paths = nodesides[conn]
+        # The pair has direct one-segment edge. Same count in both node sides.
+        downs.push(paths.index { |p| p.segments.size == 1 })
+        direct = -downs.last + paths.rindex { |p| p.segments.size == 1 } + 1
+        ups.push(paths.size - direct)
+      end
+      count = downs.max + direct + ups.max
+      splits[pair[0]] = count
+      splits[pair[1]] = count
+    end
+    # End segment offsets.
+    nodesides.each_pair do |conn, paths|
+      d = splits[conn] + 1
+      paths.each_index do |k|
+        s = paths[k].segments
+        ((paths[k].ends[0] == conn) ? s[0] : s.last).offset = Rational(k + 1, d)
+      end
+    end
+    aling_pairs = nil
+    nodesides = nil
+
+    gaps = {
+      false => Hash.new,
+      true => Hash.new
+    }
+    chosen.each_value do |p|
+      (1...(p.segments.size - 1)).each do |k|
+        s, before, after = p.segment_directions(k)
+        group = ((before < 0) ? 0 : 1) + ((after < 0) ? 0 : 2)
+        d = gaps[s.vertical]
+        d[s.cc] = d.fetch(s.cc, []).push([ s, group ])
+      end
+    end
+    gaps.each_value do |direction|
+      direction.each_value do |gap|
+        gap.sort! { |a, b| segment_order(a, b) }
+        c = [
+          group_minimal_offsets(gap.select { |a| a[1] == 0 }),
+          group_stacked_offsets(gap.select { |a| a[1] == 1 }),
+          group_stacked_offsets((gap.select() { |a| a[1] == 2 }).reverse),
+          group_minimal_offsets((gap.select() { |a| a[1] == 3 }).reverse)
+        ]
+        before = [ 0 ]
+        denominator = 1 + c[0]
+        (1...c.size).each do |k|
+          denominator += c[k]
+          before[k] = c[k - 1] + before[k - 1]
+        end
+        gap.each do |sg|
+          sg[0].offset = c[sg[1]] + 1 - sg[0].offset if sg[1] > 1
+          sg[0].offset = Rational(sg[0].offset + before[sg[1]], denominator)
+        end
+      end
+    end
+    gaps = nil
+
+    # Convert each path to coordinate object array with offset added.
+    chosen.each_pair do |edge_index, path|
+      p = []
+      if path.segments.first.vertical
+        p.push({
+          'xo' => path.segments.first.cc + path.segments.first.offset.to_f,
+          'yo' => path.segments.first.range[0]
+        })
+      else
+        p.push({
+          'xo' => path.segments.first.range[0],
+          'yo' => path.segments.first.cc + path.segments.first.offset.to_f
+        })
+      end
+      (1...path.segments.size).each do |k|
+        s = path.segments[k]
+        if s.vertical
+          p.push({ 'xo' => s.cc + s.offset.to_f, 'yo' => p.last['yo'] })
+        else
+          p.push({ 'xo' => p.last['xo'], 'yo' => s.cc + s.offset.to_f })
+        end
+      end
+      if path.segments.last.vertical
+        p.push({ 'xo' => p.last['xo'], 'yo' => path.segments.last.range[1] })
+      else
+        p.push({ 'xo' => path.segments.last.range[1], 'yo' => p.last['yo'] })
+      end
+      work[:edges][edge_index][:path] = p
+    end
+  end
+end
+
+def prepare_output(doc, work)
+  work[:nodes].each do |node|
+    doc['nodes'][node[:idx]]['xo'] = node[:xo]
+    doc['nodes'][node[:idx]]['yo'] = node[:yo]
+  end
+  work[:edges].each_value do |edge|
+    doc['edges'][edge[:idx]]['path'] = edge[:path]
+  end
+end
+
+$INPUT = nil
+$OUTPUT = nil
+$QUIET = false
+
+def main
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 26
+    opts.banner = "Usage: diagrammatron-edges [options]"
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+      $INPUT = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+      $OUTPUT = filename
+    end
+    opts.on('-q', '--quiet', 'No output except errors.') do
+      $QUIET = true
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts opts
+      $stdout.puts %Q(
+
+Input YAML file is expected to be the output of diagrammatron-nodes.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  doc = load_source
+  exit(2) if doc.nil?
+
+  begin
+    work = work_copy(doc)
+  rescue StandardError
+    work = nil
+    $stderr.puts "Error processing input."
+  end
+  exit(3) if work.nil?
+
+  place_edges(work)
+  prepare_output(doc, work)
+  begin
+    if $OUTPUT.nil?
+      $stdout.puts YAML.dump(doc)
+    else
+      fp = Pathname.new $OUTPUT
+      fp.open('w') do |f|
+        f.puts YAML.dump(doc)
+      end
+    end
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to write output: #{$OUTPUT}"
+    exit 4
+  end
+end
+
+if (defined? $unit_test).nil?
+  main
+end

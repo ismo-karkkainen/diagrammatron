@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-nodes"
+DN="../diagrammatron-edges"
 
 (
 out() {
@@ -28,10 +28,6 @@ out $?
 
 echo "####COMMAND Bad piped input"
 echo "error" | $DN > x1 2> x2
-out $?
-
-echo "####COMMAND Unrecognized algorithm"
-$DN -i tmp -a unknown > x1 2> x2
 out $?
 
 ) > $(basename $0 .sh).res
