@@ -65,6 +65,7 @@ edges:
     yo: 0.5
   - xo: 2
     yo: 0.5
+  sid: 0
 ####ERR
 Note, unconnected labeled nodes: unconnected
 Note, edges from node to itself: 0

@@ -602,6 +602,7 @@ def place_edges(work)
         p.push({ 'xo' => path.segments.last.range[1], 'yo' => p.last['yo'] })
       end
       work[:edges][edge_index][:path] = p
+      work[:edges][edge_index][:sid] = sid
     end
   end
 end
@@ -613,6 +614,7 @@ def prepare_output(doc, work)
   end
   work[:edges].each_value do |edge|
     doc['edges'][edge[:idx]]['path'] = edge[:path]
+    doc['edges'][edge[:idx]]['sid'] = edge[:sid]
   end
 end
 

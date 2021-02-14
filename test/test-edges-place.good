@@ -24,6 +24,7 @@ edges:
     yo: 0
   - xo: 0.5
     yo: 2
+  sid: 0
 - between:
   - three
   - two
@@ -34,6 +35,7 @@ edges:
     yo: 2.5
   - xo: 2.5
     yo: 0
+  sid: 0
 - between:
   - one
   - two
@@ -42,6 +44,7 @@ edges:
     yo: 0.5
   - xo: 2
     yo: 0.5
+  sid: 0
 ####ERR
 ####COMMAND T graph
 ####CODE 0
@@ -69,6 +72,7 @@ edges:
     yo: 0.3333333333333333
   - xo: 4
     yo: 0.3333333333333333
+  sid: 0
 - between:
   - three
   - two
@@ -79,6 +83,7 @@ edges:
     yo: 0.6666666666666666
   - xo: 2.6666666666666665
     yo: 2
+  sid: 0
 - between:
   - one
   - two
@@ -89,6 +94,7 @@ edges:
     yo: 0.6666666666666666
   - xo: 2.3333333333333335
     yo: 2
+  sid: 0
 ####ERR
 ####COMMAND Line graph
 ####CODE 0
@@ -120,6 +126,7 @@ edges:
     yo: 1.3333333333333333
   - xo: 4.333333333333333
     yo: 0
+  sid: 0
 - between:
   - three
   - two
@@ -128,6 +135,7 @@ edges:
     yo: 0.5
   - xo: 2
     yo: 0.5
+  sid: 0
 - between:
   - two
   - one
@@ -136,6 +144,7 @@ edges:
     yo: 0.5
   - xo: 0
     yo: 0.5
+  sid: 0
 - between:
   - three
   - one
@@ -148,4 +157,5 @@ edges:
     yo: 1.6666666666666665
   - xo: 0.3333333333333333
     yo: 0
+  sid: 0
 ####ERR
