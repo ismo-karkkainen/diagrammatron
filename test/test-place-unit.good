@@ -1,0 +1,80 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: work_copy: Node subset found
+ok: work_copy: Edge subset found
+ok: work_copy: Subsets found
+ok: work_copy: 3 nodes
+ok: work_copy: 2 edges
+ok: Edge bounding_box: x minimum is 0
+ok: Edge bounding_box: y minimum is 1
+ok: Edge bounding_box: x maximum is 4
+ok: Edge bounding_box: y maximum is 5
+ok: Edge shift: x minimum shifted by -1
+ok: Edge shift: x maximum shifted by -1
+ok: Edge shift: x maximum shifted by 1
+ok: Edge shift: x maximum shifted by 1
+ok: Node bounding_box: x limits equal
+ok: Node bounding_box: y limits equal
+ok: Node bounding_box: x coordinate matches
+ok: Node bounding_box: y coordinate matches
+ok: Node shift: x increased by 1
+ok: Node shift: y decreased by 1
+ok: BoundingBox merge: Box expanded
+ok: BoundingBox merge: y minimum unchanged
+ok: BoundingBox merge: y maximum unchanged
+ok: BoundingBox merge: Merge direction does not matter
+ok: BoundingBox merge: Merge with nil does nothing
+ok: BoundingBox area: Area 2
+ok: BoundingBox shift: xmin increased by 2
+ok: BoundingBox shift: ymin decreased by 2
+ok: BoundingBox shift: xmax increased by 2
+ok: BoundingBox shift: ymax decreased by 2
+ok: BoundingBox short_side: Short side 3
+ok: BoundingBox long_side: Long side 4
+ok: bounding_box: x minimum 0
+ok: bounding_box: y minimum 0
+ok: bounding_box: x maximum with space 5
+ok: bounding_box: y maximum with space 2
+ok: area_order: Area sort works
+ok: shift: Node 0 horizontal shift -1
+ok: shift: Node 0 vertical shift 1
+ok: shift: Node 1 horizontal shift -1
+ok: shift: Node 1 vertical shift 1
+ok: shift: Node 2 horizontal shift -1
+ok: shift: Node 2 vertical shift 1
+ok: shift: Edge 0 point 0 horizontal shift -1
+ok: shift: Edge 0 point 0 vertical shift 1
+ok: shift: Edge 0 point 1 horizontal shift -1
+ok: shift: Edge 0 point 1 vertical shift 1
+ok: shift: Edge 0 point 2 horizontal shift -1
+ok: shift: Edge 0 point 2 vertical shift 1
+ok: shift: Edge 0 point 3 horizontal shift -1
+ok: shift: Edge 0 point 3 vertical shift 1
+ok: shift: Edge 1 point 0 horizontal shift -1
+ok: shift: Edge 1 point 0 vertical shift 1
+ok: shift: Edge 1 point 1 horizontal shift -1
+ok: shift: Edge 1 point 1 vertical shift 1
+ok: overlaps: Overlaps
+ok: overlaps: Does not overlap
+ok: depth_first_search: Input state when all placed
+ok: depth_first_search: Optimal state
+ok: prepare_output: Node 0 horizontal shift
+ok: prepare_output: Node 0 vertical shift
+ok: prepare_output: Node 1 horizontal shift
+ok: prepare_output: Node 1 vertical shift
+ok: prepare_output: Node 2 horizontal shift
+ok: prepare_output: Node 2 vertical shift
+ok: prepare_output: Edge 0 point 0 horizontal shift
+ok: prepare_output: Edge 0 point 0 vertical shift
+ok: prepare_output: Edge 0 point 1 horizontal shift
+ok: prepare_output: Edge 0 point 1 vertical shift
+ok: prepare_output: Edge 0 point 2 horizontal shift
+ok: prepare_output: Edge 0 point 2 vertical shift
+ok: prepare_output: Edge 0 point 3 horizontal shift
+ok: prepare_output: Edge 0 point 3 vertical shift
+ok: prepare_output: Edge 1 point 0 horizontal shift
+ok: prepare_output: Edge 1 point 0 vertical shift
+ok: prepare_output: Edge 1 point 1 horizontal shift
+ok: prepare_output: Edge 1 point 1 vertical shift
+####ERR

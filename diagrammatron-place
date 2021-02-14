@@ -1,0 +1,291 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'set'
+
+def load_source
+  begin
+    if $INPUT.nil?
+      src = YAML.load($stdin)
+    else
+      src = YAML.load(File.read($INPUT))
+    end
+  rescue Errno::ENOENT => e
+    $stderr.puts "Could not load #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to read #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  end
+  return src
+end
+
+BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do
+  def merge(bb)
+    return self if bb.nil?
+    return BoundingBox.new(
+      (xmin < bb.xmin) ? xmin : bb.xmin,
+      (ymin < bb.ymin) ? ymin : bb.ymin,
+      (xmax < bb.xmax) ? bb.xmax : xmax,
+      (ymax < bb.ymax) ? bb.ymax : ymax
+    )
+  end
+
+  def area
+    return (xmax - xmin) * (ymax - ymin)
+  end
+
+  def short_side
+    return [(xmax - xmin), (ymax - ymin)].min
+  end
+
+  def long_side
+    return [(xmax - xmin), (ymax - ymin)].max
+  end
+
+  def overlap?(bb)
+    return false if bb.nil?
+    return false if bb.xmax <= xmin
+    return false if xmax <= bb.xmin
+    return false if bb.ymax <= ymin
+    return false if ymax <= bb.ymin
+    return true
+  end
+
+  def shift(dx, dy)
+    self.xmin += dx
+    self.ymin += dy
+    self.xmax += dx
+    self.ymax += dy
+  end
+end
+
+Edge = Struct.new(:index, :sid, :path) do
+  def bounding_box
+    xs = path.map { |xy| xy['xo'] }
+    ys = path.map { |xy| xy['yo'] }
+    return BoundingBox.new(xs.min.floor, ys.min.floor, xs.max.floor, ys.max.floor)
+  end
+
+  def shift(dx, dy)
+    path.each do |c|
+      c['xo'] += dx
+      c['yo'] += dy
+    end
+  end
+end
+
+Node = Struct.new(:index, :sid, :xo, :yo) do
+  def bounding_box
+    return BoundingBox.new(xo.floor, yo.floor, xo.floor, yo.floor)
+  end
+
+  def shift(dx, dy)
+    self.xo += dx
+    self.yo += dy
+  end
+end
+
+def work_copy(src)
+  work = { :edges => Hash.new, :nodes => Hash.new }
+  # Expected nodes, edges. Other pass-through.
+  nodes = src.fetch('nodes', [])
+  nodes.each_index do |k|
+    node = nodes[k]
+    sid = node.fetch('sid', nil)
+    xo = node.fetch('xo', nil)
+    yo = node.fetch('yo', nil)
+    next if sid.nil? or xo.nil? or yo.nil?
+    work[:nodes][sid] = work[:nodes].fetch(sid, []).push(Node.new(k, sid, xo, yo))
+  end
+  edges = src.fetch('edges', [])
+  edges.each_index do |k|
+    edge = edges[k]
+    path = edge.fetch('path', nil)
+    sid = edge.fetch('sid', nil)
+    next if path.nil? or sid.nil?
+    work[:edges][sid] = work[:edges].fetch(sid, []).push(Edge.new(k, sid, path))
+  end
+  work[:subsets] = work[:nodes].keys.to_set.merge(work[:edges].keys.to_set).to_a
+  return work
+end
+
+def bounding_box(work, sid)
+  bb = nil
+  [ :edges, :nodes ].each do |kind|
+    work[kind].fetch(sid, []).each do |item|
+      bb = item.bounding_box.merge(bb)
+    end
+  end
+  bb.xmax += 1
+  bb.ymax += 1
+  return bb
+end
+
+def area_order(bbs)
+  order = []
+  bbs.each_pair do |sid, bbox|
+    order.push([sid, bbox])
+  end
+  order.sort! do |a, b|
+    d = a[1].area <=> b[1].area
+    (d != 0) ? d : (a[0] <=> b[0])
+  end
+  return order
+end
+
+def overlaps(state, cand)
+  state.each_value do |s|
+    return true if cand.overlap?(s)
+  end
+  return false
+end
+
+def depth_first_search(order, state, bb, small_state, small_bbox)
+  if state.size < order.size
+    # Loop over all sids not in state and the loop over false, true.
+    order.each do |sb|
+      next if state.has_key? sb[0]
+      state.each_value do |n|
+        [false, true].each do |right|
+          cand = sb[1].clone
+          cand.shift(right ? n.xmax : n.xmin, right ? n.ymin : n.ymax)
+          next if overlaps(state, cand) # Invalid state.
+          # Did we create a worse solution?
+          bc = bb.merge(cand)
+          unless small_bbox.nil?
+            d = small_bbox.long_side <=> bc.long_side
+            next if d == -1
+            next if d == 0 and small_bbox.short_side <= bc.short_side
+          end
+          s = state.clone
+          s[sb[0]] = cand
+          small_state, small_bbox = depth_first_search(
+            order, s, bc, small_state, small_bbox)
+        end
+      end
+    end
+  else # We compared with area before call so no need to do it here.
+    small_bbox = bb.clone
+    small_state = state.clone
+  end
+  return [small_state, small_bbox]
+end
+
+def dumb_depth_first_search(bbs)
+  order = area_order(bbs)
+  small_state = nil
+  small_bbox = nil
+  order.each do |sb|
+    small_state, small_bbox = depth_first_search(
+      order, { sb[0] => sb[1].clone }, sb[1], small_state, small_bbox)
+  end
+  return small_state # State is sid to final bbox mapping.
+end
+
+def shift(work, sid, dx, dy)
+  [ :edges, :nodes ].each do |kind|
+    work[kind].fetch(sid, []).each do |item|
+      item.shift(dx, dy)
+    end
+  end
+end
+
+def place_subsets(work)
+  bbs = Hash.new
+  original = Hash.new
+  work[:subsets].each do |sid|
+    bb = bounding_box(work, sid)
+    original[sid] = bb.clone
+    bb.shift(-bb.xmin, -bb.ymin) # Ensure the corner is at (0, 0)
+    bbs[sid] = bb
+  end
+  bbs = dumb_depth_first_search(bbs)
+  # Shift everything in each subset according to shift compared to original.
+  original.each_pair do |sid, bbox|
+    shifted = bbs[sid]
+    shift(work, sid, shifted.xmin - bbox.xmin, shifted.ymin - bbox.ymin)
+  end
+end
+
+def prepare_output(doc, work)
+  work[:nodes].each_pair do |sid, nodes|
+    nodes.each do |node|
+      doc['nodes'][node.index]['xo'] = node.xo
+      doc['nodes'][node.index]['yo'] = node.yo
+    end
+  end
+  work[:edges].each_pair do |sid, edges|
+    edges.each do |edge|
+      doc['edges'][edge.index]['path'] = edge.path
+    end
+  end
+end
+
+$INPUT = nil
+$OUTPUT = nil
+
+def main
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 26
+    opts.banner = "Usage: diagrammatron-place [options]"
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+      $INPUT = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+      $OUTPUT = filename
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts opts
+      $stdout.puts %Q(
+Input YAML file is expected to be the output of diagrammatron-edges.
+
+Output is the input file with 'xo' and 'yo' modified so that the sub-diagrams
+do not overlap.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  doc = load_source
+  exit(2) if doc.nil?
+
+  begin
+    work = work_copy(doc)
+  rescue StandardError
+    work = nil
+    $stderr.puts "Error processing input."
+  end
+  exit(3) if work.nil?
+
+  # Eventually support more algorithms?
+  place_subsets(work)
+  prepare_output(doc, work)
+  begin
+    if $OUTPUT.nil?
+      $stdout.puts YAML.dump(doc)
+    else
+      fp = Pathname.new $OUTPUT
+      fp.open('w') do |f|
+        f.puts YAML.dump(doc)
+      end
+    end
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to write output: #{$OUTPUT}"
+    exit 4
+  end
+end
+
+if (defined? $unit_test).nil?
+  main
+end

@@ -13,7 +13,7 @@ task :install do
 end
 
 desc 'Test.'
-task :test => [ :testnodes, :testedges ] do
+task :test => [ :testnodes, :testedges, :testplace ] do
 end
 
 desc 'Test nodes.'
@@ -24,4 +24,9 @@ end
 desc 'Test edges.'
 task :testedges do
   sh './runtest.sh edges'
+end
+
+desc 'Test place.'
+task :testplace do
+  sh './runtest.sh place'
 end

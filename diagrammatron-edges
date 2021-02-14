@@ -352,7 +352,7 @@ def keep_least_crossing(full)
     $paths.delete chosen.first.id
     full[chosen[1]].delete_at(chosen[2])
   end
-  $paths = nil
+  $paths = Hash.new
   chosen = Hash.new
   full.each_pair do |edge_index, cands|
     chosen[edge_index] = cands[0]
