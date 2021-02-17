@@ -1,0 +1,144 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'json'
+require 'pathname'
+
+def load_source
+  begin
+    if $INPUT.nil?
+      src = $stdin.read
+    else
+      src = File.read($INPUT)
+    end
+    src = JSON.parse(src)
+  rescue Errno::ENOENT => e
+    $stderr.puts "Could not load #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to read #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    return nil
+  end
+  return src
+end
+
+def convert(src)
+  idx2label = Hash.new
+  labels = Hash.new # For label collisions.
+  compound = Hash.new # For compound nodes to remove if no edges.
+  nodes = []
+  items = src.fetch('objects', [])
+  items.each_index do |k|
+    item = items[k]
+    idx = item.fetch('_gvid', nil)
+    name = item.fetch('name', "node #{k}")
+    if idx.nil?
+      $stderr.puts "Object #{name} missing _gvid"
+      return nil
+    end
+    compound[idx] = k if item.fetch('compound', false)
+    if labels.has_key? name
+      labels[name] += 1
+      name = "#{name}.#{labels[name]}" # Could collide here as well.
+    else
+      labels[name] = 0
+    end
+    idx2label[idx] = name
+    nodes.push({ 'label' => name })
+    shape = item.fetch('shape', nil)
+    nodes.last['shape'] = shape unless shape.nil?
+  end
+  edges = []
+  items = src.fetch('edges', [])
+  items.each_index do |k|
+    item = items[k]
+    tail = item.fetch('tail', nil)
+    head = item.fetch('head', nil)
+    if tail.nil? or head.nil?
+      $stderr.puts "Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail missing"
+      return nil
+    end
+    next if head == tail
+    if compound.has_key? head
+      compound.delete head
+    elsif compound.has_key? tail
+      compound.delete tail
+    end
+    head = idx2label.fetch(head, nil)
+    tail = idx2label.fetch(tail, nil)
+    if tail.nil? or head.nil?
+      $stderr.puts "Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail refer to unseen object index"
+      return nil
+    end
+    edges.push({ 'between' => [ tail, head ] })
+  end
+  # All compound nodes that have no edges are removed.
+  compound.keys.sort.reverse.each do |k|
+    nodes.delete_at k
+  end
+  return { 'edges' => edges, 'nodes' => nodes }
+end
+
+$INPUT = nil
+$OUTPUT = nil
+
+def main
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 26
+    opts.banner = "Usage: dot_json2diagrammatron [options]"
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+      $INPUT = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+      $OUTPUT = filename
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts opts
+      $stdout.puts %Q(
+Output is a YAML file with "name" used as "label" and "shape" used as is
+for nodes. For edges "tail" and "head" are used as the first and second element
+of "between" with the "name" as the identifier. Compound objects are ignored.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  doc = load_source
+  exit(2) if doc.nil?
+
+  begin
+    out = convert(doc)
+  rescue StandardError
+    out = nil
+    $stderr.puts "Error processing input."
+  end
+  exit(3) if out.nil?
+
+  begin
+    if $OUTPUT.nil?
+      $stdout.puts YAML.dump(out)
+    else
+      fp = Pathname.new $OUTPUT
+      fp.open('w') do |f|
+        f.puts YAML.dump(out)
+      end
+    end
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to write output: #{$OUTPUT}"
+    exit 4
+  end
+end
+
+if (defined? $unit_test).nil?
+  main
+end

@@ -1,15 +1,38 @@
 # Diagrammatron
 
-This is a small collection to programs to do three things:
+This is a small collection to programs to do the following:
+- Convert a dot_json file to diagrammatron format.
 - Place the nodes of a graph/diagram onto a plane.
 - Place edges between the nodes.
+- Place separate sub-diagrams so that they do not overlap.
 - Turn the resulting graph into a graphics file for viewing.
 
 All stages are separate programs. Input file can contain information for
 later stages as each stage only considers the part it needs and other
 information is passed through as is.
 
+If you have a GraphViz dot file, you can convert it using GraphViz dot tool:
+
+    dot -Tdot_json -odiagram.json diagram.dot
+
+Only the node names and edge end-point information is used.
+
+# Programs
+
+* dot_json2diagrammatron converts from dot_json to diagrammtron format.
+* diagrammatron-nodes takes the previous output and places nodes.
+* diagrammatron-edges takes the previous output and places edges.
+* diagrammatron-place takes the previous output and separates sub-diagrams.
+* diagrammatron-svg takes the previous output and outputs a svg file.
+
+Unless you need to make changes, you can pipe the output of previous to the
+next one, such as:
+
+    dot_json2diagrammatron -i diagram.json | diagrammatron-nodes | diagrammatron-edges | diagrammatron-place | diagrammatron-svg -o diagram.svg
+
 # Requirements
+
+You need Ruby 2.5 or newer. Only standard library packages are used.
 
 # Testing and installing
 
