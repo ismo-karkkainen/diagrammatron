@@ -128,13 +128,21 @@ def bounding_box(work, sid)
   return bb
 end
 
+def area_compare(a, b)
+  d = a.area <=> b.area
+  return d unless d == 0
+  d = (a.xmax - a.xmin) <=> (b.xmax - b.xmin)
+  return d unless d == 0
+  return (a.ymax - a.ymin) <=> (b.ymax - b.ymin)
+end
+
 def area_order(bbs)
   order = []
   bbs.each_pair do |sid, bbox|
     order.push([sid, bbox])
   end
   order.sort! do |a, b|
-    d = a[1].area <=> b[1].area
+    d = area_compare(a[1], b[1])
     (d != 0) ? d : (a[0] <=> b[0])
   end
   return order
@@ -150,8 +158,11 @@ end
 def depth_first_search(order, state, bb, small_state, small_bbox)
   if state.size < order.size
     # Loop over all sids not in state and the loop over false, true.
+    prev = nil
     order.each do |sb|
       next if state.has_key? sb[0]
+      next if sb[1] == prev
+      prev = sb[1]
       state.each_value do |n|
         [false, true].each do |right|
           cand = sb[1].clone
@@ -182,7 +193,10 @@ def dumb_depth_first_search(bbs)
   order = area_order(bbs)
   small_state = nil
   small_bbox = nil
+  prev = nil
   order.each do |sb|
+    next if sb[1] == prev # No point trying equivalent bbox in the same spot.
+    prev = sb[1]
     small_state, small_bbox = depth_first_search(
       order, { sb[0] => sb[1].clone }, sb[1], small_state, small_bbox)
   end

@@ -36,7 +36,7 @@ def convert(src)
   items.each_index do |k|
     item = items[k]
     idx = item.fetch('_gvid', nil)
-    name = item.fetch('name', "node #{k}")
+    name = item.fetch('name', item.fetch('label', "node #{k}"))
     if idx.nil?
       $stderr.puts "Object #{name} missing _gvid"
       return nil
@@ -78,7 +78,7 @@ def convert(src)
     edges.push({ 'between' => [ tail, head ] })
   end
   # All compound nodes that have no edges are removed.
-  compound.keys.sort.reverse.each do |k|
+  compound.values.sort.reverse.each do |k|
     nodes.delete_at k
   end
   return { 'edges' => edges, 'nodes' => nodes }
