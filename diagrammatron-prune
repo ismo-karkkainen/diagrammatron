@@ -26,60 +26,56 @@ def load_source
   return src
 end
 
-def grep(doc, patterns, keep)
-  index2label = Hash.new
+def prune_array(original, matching, keep)
+  kept = []
+  original.each_index do |k|
+    if (keep and matching[k]) or (not(keep) and not(matching[k]))
+      kept.push original[k]
+    end
+  end
+  return kept
+end
+
+def prune(doc, patterns, keep)
+  labels = Set.new
   nodes = doc.fetch('nodes', [])
+  matching = Array.new(nodes.size, false)
   nodes.each_index do |k|
-    node = nodes[k]
-    label = node.fetch('label', '')
+    label = nodes[k].fetch('label', '')
     patterns.each do |p|
       if p.match(label)
-        index2label[k] = label
+        matching[k] = true
+        labels.add label
         break
       end
     end
   end
-  labels = Set.new(index2label.values)
+  doc['nodes'] = prune_array(nodes, matching, keep)
   edges = doc.fetch('edges', [])
   matching = Array.new(edges.size, false)
   edges.each_index do |k|
-    edge = edges[k]
-    edge.fetch('between', []).each do |label|
-      if labels.member? label
-        matching[k] = true
-        break
-      end
+    between = edges[k].fetch('between', [])
+    if between.size != 2
+      matching[k] = keep # Removing these suppresses later warnings.
+    elsif keep
+      matching[k] = (labels.member?(between[0]) and labels.member?(between[1]))
+    else
+      matching[k] = (labels.member?(between[0]) or labels.member?(between[1]))
     end
   end
-  nodes = []
-  edges = []
-  original = doc.fetch('nodes', [])
-  original.each_index do |k|
-    selected = index2label.has_key? k
-    if (keep and selected) or (not(keep) and not(selected))
-      nodes.push original[k]
-    end
-  end
-  original = doc.fetch('edges', [])
-  original.each_index do |k|
-    if (keep and matching[k]) or (not(keep) and not(matching[k]))
-      edges.push original[k]
-    end
-  end
-  doc['nodes'] = nodes
-  doc['edges'] = edges
+  doc['edges'] = prune_array(edges, matching, keep)
 end
 
 $INPUT = nil
 $OUTPUT = nil
-$KEEP = true
+$KEEP = false
 
 def main
-  ENV['POSIXLY_CORRECT'] = '1'
+  ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 26
-    opts.banner = "Usage: diagrammatron-grep [options] patterns..."
+    opts.banner = "Usage: diagrammatron-prune [options] patterns..."
     opts.separator ""
     opts.separator "Options:"
     opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
@@ -88,8 +84,8 @@ def main
     opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
       $OUTPUT = filename
     end
-    opts.on('-r', '--reverse', 'Keep nodes that do not match patterns.') do
-      $KEEP = false
+    opts.on('-r', '--reverse', 'Keep nodes that match patterns.') do
+      $KEEP = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
@@ -99,7 +95,7 @@ Patterns are strings used to create Ruby Regexps.
 Input YAML file is expected to be dot_json2diagrammatron output.
 
 Output is the input file with nodes that have labels that match patterns
-kept or removed depending on options. Edges to removed nodes are removed.
+removed or kept depending on options. Edges to removed nodes are removed.
 )
       exit 0
     end
@@ -107,21 +103,19 @@ kept or removed depending on options. Edges to removed nodes are removed.
   parser.parse! ARGV
 
   begin
-    patterns = ARGV.map do |p|
-      Regexp.new(p)
-    end
+    patterns = ARGV.map { |p| Regexp.new(p) }
   rescue StandardError => e
     $stderr.puts "Error creating Regexp: #{e.to_s}"
-    exit(1)
+    return 1
   end
   doc = load_source
-  exit(2) if doc.nil?
+  return 2 if doc.nil?
 
   begin
-    grep(doc, patterns, $KEEP)
+    prune(doc, patterns, $KEEP)
   rescue StandardError => e
-    $stderr.puts "Error processing input. #{e.to_s}"
-    exit(3)
+    $stderr.puts "Error processing input."
+    return 3
   end
 
   begin
@@ -136,10 +130,9 @@ kept or removed depending on options. Edges to removed nodes are removed.
   rescue StandardError => e
     $stderr.puts e.to_s
     $stderr.puts "Failed to write output: #{$OUTPUT}"
-    exit 4
+    return 4
   end
+  return 0
 end
 
-if (defined? $unit_test).nil?
-  main
-end
+exit(main) if (defined? $unit_test).nil?

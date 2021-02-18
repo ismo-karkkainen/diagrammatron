@@ -1,0 +1,8 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: prune_array: Kept non-matching 1
+ok: prune_array: Kept non-matching 2
+ok: prune_array: Kept matching 2
+ok: prune_array: Kept matching 1
+####ERR

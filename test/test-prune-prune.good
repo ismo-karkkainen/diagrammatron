@@ -1,0 +1,40 @@
+####COMMAND Prune one.
+####CODE 0
+####OUT
+---
+nodes:
+- label: two
+- label: three
+edges:
+- between:
+  - two
+  - three
+####ERR
+####COMMAND Prune three one.
+####CODE 0
+####OUT
+---
+nodes:
+- label: two
+edges: []
+####ERR
+####COMMAND Keep one.
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+edges: []
+####ERR
+####COMMAND Keep three one.
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+- label: three
+edges:
+- between:
+  - three
+  - one
+####ERR
