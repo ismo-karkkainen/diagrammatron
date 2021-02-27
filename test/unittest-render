@@ -1,0 +1,172 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+$unit_test = 0
+load '../diagrammatron-render'
+
+$context = ''
+def assert(value, expected, message)
+  condition = value == expected
+  $stdout.puts("#{condition ? 'ok' : 'fail'}: #{$context}: #{message}")
+  $stderr.puts("#{value.to_s} != #{expected.to_s}") unless condition
+  $unit_test = 1 unless condition
+  return condition
+end
+
+$context = 'Coordinate <=>'
+a = Coordinate.new({ :x => 0 }, :x, 1)
+b = Coordinate.new({ :x => 1 }, :x, 1)
+c = Coordinate.new({ :x => 1 }, :x, -1)
+d = Coordinate.new({ :x => 1.5 }, :x, 0)
+e = Coordinate.new({ :x => 1.2 }, :x, 0)
+assert(a <=> b, -1, 'Smaller coordinate first')
+assert(b <=> c, 1, 'Decreasing direction first')
+assert(d <=> e, 1, 'Smaller fraction first')
+
+$context = 'Coordinate integer'
+a = Coordinate.new({ :x => 3.5 }, :x, 0)
+assert(a.integer, 3, 'Integer part of coordinate')
+
+$context = 'Coordinate fraction'
+assert(a.fraction, 0.5, 'Fractional part of coordinate')
+
+$context = 'end_directions'
+p = { 'xo' => 0, 'yo' => 0 }
+v = { 'xo' => 0, 'yo' => 1 }
+h = { 'xo' => 1, 'yo' => 0 }
+assert(end_directions(p, v), [ 0, 1 ], 'Up')
+assert(end_directions(v, p), [ 0, -1 ], 'Down')
+assert(end_directions(p, h), [ 1, 0 ], 'Right')
+assert(end_directions(h, p), [ -1, 0 ], 'Left')
+
+$context = 'push_coords'
+xcs = []
+ycs = []
+c2c = Hash.new(0)
+push_coords(xcs, ycs, c2c, p, 1, -1)
+assert(xcs.size, 1, 'Pushed x coordinate')
+assert(xcs.first.key, 'xo', 'X key xo')
+assert(xcs.first.direction, 1, 'X direction 1')
+assert(ycs.size, 1, 'Pushed y coordinate')
+assert(ycs.first.key, 'yo', 'Y key yo')
+assert(ycs.first.direction, -1, 'Y direction -1')
+assert(c2c.has_key?([ p['xo'], p['yo'], 'xo', 1 ]), true, 'Up from node')
+assert(c2c.has_key?([ p['xo'], p['yo'], 'yo', -1 ]), true, 'Left from node')
+push_coords(xcs, ycs, c2c, p, 0, 0)
+assert(c2c.size, 2, 'Mid-points not added to coordinate, key, direction')
+
+$context = 'separate_coordinates'
+p = { 'xo' => 0, 'yo' => 1 }
+v = { 'xo' => 0, 'yo' => 2 }
+h = { 'xo' => 1, 'yo' => 2 }
+doc = {
+  'nodes' => [
+    { 'xo' => 0, 'yo' => 1 }
+  ],
+  'edges' => [
+    { 'path' => [ p, v, h ] }
+  ]
+}
+xcs, ycs, c2c = separate_coordinates(doc)
+assert(xcs.size, ycs.size, 'Each point in both arrays')
+assert(xcs.size, 5, 'Node 2 times for sides and each path point once')
+assert(c2c.size, 2, 'Only path ends added to coordinate, key, direction')
+
+$context = 'Defaults'
+t = { 'defaults' => {
+  'width_key' => 'w',
+  'height_key' => 'h',
+  'width_margin' => 10,
+  'height_margin' => 11,
+  'edge_gap' => 12
+}}
+d = Defaults.new(t)
+assert(d.width_key, t['defaults']['width_key'], 'Width key is same')
+assert(d.height_key, t['defaults']['height_key'], 'Height key is same')
+assert(d.width_margin, t['defaults']['width_margin'], 'Width margin is same')
+assert(d.height_margin, t['defaults']['height_margin'], 'Height margin is same')
+assert(d.edge_gap, t['defaults']['edge_gap'], 'Edge gap is same')
+
+$context = 'maxima'
+doc = {
+  'nodes' => [
+    { 'xo' => 0, 'yo' => 1, d.width_key => 1, d.height_key => 4 },
+    { 'xo' => 0, 'yo' => 1, d.width_key => 3, d.height_key => 2 },
+    { 'xo' => 2, 'yo' => 3, d.width_key => 5, d.height_key => 6 }
+  ]
+}
+xmax, ymax = maxima(doc, d)
+assert(xmax[0], 3, 'x 0 maximum is 3')
+assert(ymax[1], 4, 'y 1 maximum is 4')
+assert(xmax[2], 5, 'x 2 maximum is 5')
+assert(ymax[3], 6, 'y 3 maximum is 6')
+
+$context = 'apply_maxima'
+apply_maxima(doc, xmax, ymax, d)
+assert(doc['nodes'][0][d.width_key], doc['nodes'][1][d.width_key], 'Same width')
+assert(doc['nodes'][0][d.height_key], doc['nodes'][1][d.height_key], 'Same height')
+
+$context = 'parallel_edge_step_minima'
+c2m = parallel_edge_step_minima([
+  Coordinate.new({ :c => 1.25 }, :c, 0),
+  Coordinate.new({ :c => 1.5 }, :c, 0),
+  Coordinate.new({ :c => 1.25 }, :c, 0)
+])
+assert(c2m.keys, [ 1 ], 'Only one integer coordinate')
+assert(c2m.fetch(1, 2), 0.25, 'Minimum is 0.25')
+
+$context = 'remap_coordinates'
+d = Defaults.new({ 'defaults' => {
+  'width_key' => 'w',
+  'height_key' => 'h',
+  'width_margin' => 10,
+  'height_margin' => 11,
+  'edge_gap' => 6
+}})
+cs = [
+  Coordinate.new({ :c => 0.5 }, :c, 0),
+  Coordinate.new({ :c => 1 }, :c, -1),
+  Coordinate.new({ :c => 1.5 }, :c, 0),
+  Coordinate.new({ :c => 1 }, :c, 1),
+  Coordinate.new({ :c => 2.5 }, :c, 0),
+  Coordinate.new({ :c => 3 }, :c, -1),
+  Coordinate.new({ :c => 3 }, :c, 1),
+  Coordinate.new({ :c => 4 }, :c, -1),
+  Coordinate.new({ :c => 4 }, :c, 1),
+  Coordinate.new({ :c => 5.5 }, :c, 0)
+]
+remap_coordinates(cs, { 1 => 10, 3 => 13, 4 => 17 },
+  { 0 => 1.0, 1 => 0.5, 2 => 0.5, 5 => 1.0 }, d)
+assert(cs[0].object[:c], d.edge_gap * 1.5, 'Low edge')
+assert(cs[1].object[:c], 12, 'Low first node')
+assert(cs[2].object[:c], 17, 'First node center edge')
+assert(cs[3].object[:c], 22, 'High first node')
+assert(cs[4].object[:c], 28, 'Between nodes edge')
+assert(cs[5].object[:c], 34, 'Low center node')
+assert(cs[6].object[:c], 47, 'High center node')
+assert(cs[7].object[:c], 53, 'Low top node')
+assert(cs[8].object[:c], 70, 'High top node')
+assert(cs[9].object[:c], 73, 'Top edge')
+cs = [
+  Coordinate.new({ :c => 1 }, :c, -1),
+  Coordinate.new({ :c => 1 }, :c, 1),
+  Coordinate.new({ :c => 1 }, :c, 1),
+  Coordinate.new({ :c => 2.5 }, :c, 0),
+  Coordinate.new({ :c => 2.5 }, :c, 0),
+  Coordinate.new({ :c => 3 }, :c, -1),
+  Coordinate.new({ :c => 3 }, :c, -1),
+  Coordinate.new({ :c => 3 }, :c, 1)
+]
+remap_coordinates(cs, { 1 => 10, 3 => 13 }, { 2 => 0.5 }, d)
+assert(cs[0].object[:c], 6, 'Low first node')
+assert(cs[1].object[:c], 16, 'High first node')
+assert(cs[2].object[:c], 16, 'Edge low connector')
+assert(cs[3].object[:c], 22, 'Edge sidestep')
+assert(cs[4].object[:c], 22, 'Edge sidestep 2')
+assert(cs[5].object[:c], 28, 'Edge high connector')
+assert(cs[6].object[:c], 28, 'Low top node')
+assert(cs[7].object[:c], 41, 'High top node')
+
+exit $unit_test

@@ -1,19 +1,24 @@
 task :default => [ :install ]
 
+def install(exe, path)
+  puts "Installing #{exe}."
+  %x(sudo install #{exe} #{path})
+end
+
 desc 'Install programs to PREFIX/bin.'
 task :install do
   prefix = ENV.fetch('PREFIX', '/usr/local')
   target = File.join(prefix, 'bin')
   puts "Using PREFIX #{prefix} to install to #{target}."
   abort("Target #{target} is not a directory.") unless File.directory? target
-  [ 'diagrammatron-nodes', 'diagrammatron-edges', 'diagrammatron-render' ].each do |exe|
-    puts "Installing #{exe}."
-    %x(sudo install #{exe} #{prefix}/bin/)
+  [ 'nodes', 'edges', 'place', 'prune', 'render' ].each do |suffix|
+    install("diagrammatron-#{suffix}", target)
   end
+  install('dot_json2diagrammatron', target)
 end
 
 desc 'Test.'
-task :test => [ :testnodes, :testedges, :testplace, :testprune ] do
+task :test => [ :testnodes, :testedges, :testplace, :testprune, :testrender ] do
 end
 
 desc 'Test nodes.'
@@ -34,4 +39,9 @@ end
 desc 'Test prune.'
 task :testprune do
   sh './runtest.sh prune'
+end
+
+desc 'Test render.'
+task :testrender do
+  sh './runtest.sh render'
 end

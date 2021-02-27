@@ -1,0 +1,56 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: Coordinate <=>: Smaller coordinate first
+ok: Coordinate <=>: Decreasing direction first
+ok: Coordinate <=>: Smaller fraction first
+ok: Coordinate integer: Integer part of coordinate
+ok: Coordinate fraction: Fractional part of coordinate
+ok: end_directions: Up
+ok: end_directions: Down
+ok: end_directions: Right
+ok: end_directions: Left
+ok: push_coords: Pushed x coordinate
+ok: push_coords: X key xo
+ok: push_coords: X direction 1
+ok: push_coords: Pushed y coordinate
+ok: push_coords: Y key yo
+ok: push_coords: Y direction -1
+ok: push_coords: Up from node
+ok: push_coords: Left from node
+ok: push_coords: Mid-points not added to coordinate, key, direction
+ok: separate_coordinates: Each point in both arrays
+ok: separate_coordinates: Node 2 times for sides and each path point once
+ok: separate_coordinates: Only path ends added to coordinate, key, direction
+ok: Defaults: Width key is same
+ok: Defaults: Height key is same
+ok: Defaults: Width margin is same
+ok: Defaults: Height margin is same
+ok: Defaults: Edge gap is same
+ok: maxima: x 0 maximum is 3
+ok: maxima: y 1 maximum is 4
+ok: maxima: x 2 maximum is 5
+ok: maxima: y 3 maximum is 6
+ok: apply_maxima: Same width
+ok: apply_maxima: Same height
+ok: parallel_edge_step_minima: Only one integer coordinate
+ok: parallel_edge_step_minima: Minimum is 0.25
+ok: remap_coordinates: Low edge
+ok: remap_coordinates: Low first node
+ok: remap_coordinates: First node center edge
+ok: remap_coordinates: High first node
+ok: remap_coordinates: Between nodes edge
+ok: remap_coordinates: Low center node
+ok: remap_coordinates: High center node
+ok: remap_coordinates: Low top node
+ok: remap_coordinates: High top node
+ok: remap_coordinates: Top edge
+ok: remap_coordinates: Low first node
+ok: remap_coordinates: High first node
+ok: remap_coordinates: Edge low connector
+ok: remap_coordinates: Edge sidestep
+ok: remap_coordinates: Edge sidestep 2
+ok: remap_coordinates: Edge high connector
+ok: remap_coordinates: Low top node
+ok: remap_coordinates: High top node
+####ERR

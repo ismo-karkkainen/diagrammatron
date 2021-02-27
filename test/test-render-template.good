@@ -1,0 +1,5 @@
+####COMMAND Invalid base64 template field
+####CODE 2
+####OUT
+####ERR
+Key base64bad base-64 decoding failed to key bad

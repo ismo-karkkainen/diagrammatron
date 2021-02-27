@@ -1,0 +1,423 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'erb'
+require 'pathname'
+require 'set'
+require 'erb'
+require 'base64'
+
+
+def load_source(input)
+  begin
+    if input.nil?
+      src = YAML.load($stdin)
+    else
+      src = YAML.load(File.read(input))
+    end
+  rescue Errno::ENOENT => e
+    $stderr.puts "Could not load #{input.nil? ? 'stdin' : input}"
+    return nil
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to read #{input.nil? ? 'stdin' : input}"
+    return nil
+  end
+  return src
+end
+
+Coordinate = Struct.new(:object, :key, :direction) do
+  def <=>(c)
+    d = integer <=> c.integer
+    return d unless d == 0
+    d = direction <=> c.direction
+    return d unless d == 0
+    return fraction <=> c.fraction
+  end
+
+  def integer
+    return object[key].to_int
+  end
+
+  def fraction
+    return object[key] - object[key].floor
+  end
+end
+
+def end_directions(end_point, neighbor)
+  if end_point['xo'] == neighbor['xo'] # Vertical
+    return [ 0, (end_point['yo'] < neighbor['yo']) ? 1 : -1 ]
+  end
+  return [ (end_point['xo'] < neighbor['xo']) ? 1 : -1, 0 ]
+end
+
+def push_coords(xcoords, ycoords, ckd2count, object, xdirection, ydirection, node = false)
+  unless node or xdirection == 0
+    k = [ object['xo'], object['yo'], 'xo', xdirection ]
+    ckd2count[k] = ckd2count[k] + 1
+  end
+  unless node or ydirection == 0
+    k = [ object['xo'], object['yo'], 'yo', ydirection ]
+    ckd2count[k] = ckd2count[k] + 1
+  end
+  xcoords.push(Coordinate.new(object, 'xo', xdirection))
+  ycoords.push(Coordinate.new(object, 'yo', ydirection))
+end
+
+def separate_coordinates(doc)
+  xcoords = []
+  ycoords = []
+  ckd2count = Hash.new(0)
+  doc['nodes'].each do |node|
+    # All four sides.
+    push_coords(xcoords, ycoords, ckd2count, node, -1, -1, true)
+    push_coords(xcoords, ycoords, ckd2count, node.clone, 1, 1, true)
+  end
+  doc['edges'].each do |edge|
+    path = edge.fetch('path', nil)
+    next if path.nil?
+    xdirection, ydirection = end_directions(path[0], path[1])
+    push_coords(xcoords, ycoords, ckd2count, path[0], xdirection, ydirection)
+    (1...(path.size - 1)).each do |k|
+      push_coords(xcoords, ycoords, ckd2count, path[k], 0, 0)
+    end
+    xdirection, ydirection = end_directions(path.last, path[path.size - 2])
+    push_coords(xcoords, ycoords, ckd2count, path.last, xdirection, ydirection)
+  end
+  xcoords.sort!
+  ycoords.sort!
+  return [ xcoords, ycoords, ckd2count ]
+end
+
+class Defaults
+  attr_reader :width_key, :height_key, :width_margin, :height_margin, :edge_gap
+  attr_reader :reverse_y
+
+  def initialize(template)
+    defaults = template.fetch('defaults', {})
+    @width_key = defaults.fetch('width_key', 'w')
+    @height_key = defaults.fetch('height_key', 'h')
+    @width_margin = defaults.fetch('width_margin', 10)
+    @height_margin = defaults.fetch('height_margin', 10)
+    @edge_gap = defaults.fetch('edge_gap', 10)
+    @reverse_y = defaults.fetch('reverse_y', false)
+  end
+end
+
+class SizeEstimation
+  attr_accessor :node, :template, :ckd2count, :defaults
+
+  def initialize(template, ckd2count, defaults)
+    @node = nil
+    @template = template
+    @ckd2count = ckd2count
+    @defaults = defaults
+  end
+
+  def get_binding
+    return binding
+  end
+
+  def get_default(key, default_value = nil)
+    return @template.fetch('defaults', {}).fetch(key, default_value)
+  end
+
+  def max_edges(key, edge_gap)
+    c = [ @node['xo'], @node['yo'], key, -1 ]
+    count = @ckd2count[c]
+    c[3] = 1
+    count = [ count, @ckd2count[c] ].max
+    return 0 if count < 2
+    return (count - 1) * (edge_gap.nil? ? @defaults.edge_gap : edge_gap)
+  end
+
+  def default_size(width_scale, height_scale,
+      width_margin = nil, height_margin = nil, edge_gap = nil)
+    lines = @node.fetch('label', '').split("\n")
+    w = 2 * (width_margin.nil? ? @defaults.width_margin : width_margin) +
+      width_scale * (lines.map { |s| s.size }).max
+    @node[@defaults.width_key] = [ w, max_edges('xo', edge_gap) ].max
+    h = 2 * (height_margin.nil? ? @defaults.height_margin : height_margin) +
+      height_scale * lines.size
+    @node[@defaults.height_key] = [ h, max_edges('yo', edge_gap) ].max
+  end
+end
+
+def estimate_sizes(doc, template, ckd2count, defaults)
+  $render = SizeEstimation.new(template, ckd2count, defaults)
+  sizes = template.fetch('sizes', {})
+  defaults = template.fetch('defaults', {})
+  doc['nodes'].each do |node|
+    $render.node = node
+    style = node.fetch('style', 'default')
+    code = sizes.fetch(style, defaults.fetch('size', 
+      %Q(raise NotImplementedError, "No size estimator for style: #{style}")))
+    code = code.join("\n") if code.is_a? Array
+    begin
+      eval(code, $render.get_binding)
+    rescue StandardError => e
+      $stderr.puts "Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e.to_s}"
+      return false
+    end
+  end
+  $render = nil
+  return true
+end
+
+def maxima(doc, defaults)
+  xmax = Hash.new(0)
+  ymax = Hash.new(0)
+  doc.fetch('nodes', []).each do |node|
+    xmax[node['xo']] = [ node[defaults.width_key], xmax[node['xo']] ].max
+    ymax[node['yo']] = [ node[defaults.height_key], ymax[node['yo']] ].max
+  end
+  return [ xmax, ymax ]
+end
+
+def apply_maxima(doc, xmax, ymax, defaults)
+  doc.fetch('nodes', []).each do |node|
+    node[defaults.width_key] = xmax[node['xo']]
+    node[defaults.height_key] = ymax[node['yo']]
+  end
+end
+
+def parallel_edge_step_minima(coords)
+  c2m = Hash.new(1.0)
+  coords.each do |coord|
+    f = coord.fraction
+    next if f == 0
+    ic = coord.integer
+    c2m[ic] = [ c2m[ic], f ].min
+  end
+  return c2m
+end
+
+def remap_coordinates(coords, cmax, c2min, defaults)
+  c = defaults.edge_gap
+  gap = 0 # How much space all edge segments need.
+  zero_after_decrease = false
+  prev_dir = -2
+  coords.each do |coord|
+    zero_after_decrease = true if prev_dir == -1 and coord.direction == 0
+    case coord.direction
+    when -1
+      c += gap if -1 < prev_dir
+      gap = defaults.edge_gap
+      coord.object[coord.key] = c
+    when 0
+      gap = defaults.edge_gap / c2min[coord.integer]
+      if zero_after_decrease
+        # Edge segment is at same range as nodes.
+        coord.object[coord.key] = c + coord.fraction * cmax[coord.integer]
+      else
+        coord.object[coord.key] =
+          c + defaults.edge_gap * coord.fraction / c2min[coord.integer]
+      end
+    when 1
+      gap = defaults.edge_gap
+      c += cmax[coord.integer] unless 1 == prev_dir
+      coord.object[coord.key] = c
+      zero_after_decrease = false
+    end
+    prev_dir = coord.direction
+  end
+end
+
+class Render
+  attr_accessor :doc, :template, :defaults
+
+  def initialize(doc, template, defaults)
+    @doc = doc
+    @template = template
+    @defaults = defaults
+  end
+
+  def get_binding
+    return binding
+  end
+
+  def get_default(key, default_value = nil)
+    return @template.fetch('defaults', {}).fetch(key, default_value)
+  end
+
+  def dimensions
+    w = 0
+    h = 0
+    @doc.fetch('nodes', []).each do |node|
+      w = [ w, node['xo'] + node[@defaults.width_key] ].max
+      h = [ h, node['yo'] + node[@defaults.height_key] ].max
+    end
+    @doc.fetch('edges', []).each do |edge|
+      path = edge.fetch('path', nil)
+      next if path.nil?
+      path.each do |p|
+        w = [ w, p['xo'] ].max
+        h = [ h, p['yo'] ].max
+      end
+    end
+    return [ w.to_i, h.to_i ]
+  end
+end
+
+def apply(doc, template, defaults)
+  $render = Render.new(doc, template, defaults)
+  out = ERB.new(template.fetch('template', '')).result($render.get_binding)
+  $render = nil
+  return out
+end
+
+def default_template
+  return {
+    'defaults' => {
+      'edge_gap' => 15,
+      'width_key' => 'w',
+      'height_key' => 'h',
+      'width_margin' => 10,
+      'height_margin' => 10,
+      'font_size' => 16,
+      'font_width' => 7,
+      'stroke_width' => 5
+    },
+    'sizes' => {
+      'default' => %q($render.default_size($render.node.fetch('width_scale', $render.get_default('font_width', 7)), $render.node.fetch('height_scale', $render.get_default('font_size', 16))))
+    },
+    'template' => %q(<?xml version="1.0"?>
+<%=
+w, hh = $render.dimensions
+hh += $render.defaults.height_margin
+out = [
+  "<svg width=\"#{w + $render.defaults.width_margin}\" height=\"#{hh}\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\">"
+]
+fs = $render.get_default('font_size', 16)
+hm = $render.get_default('height_margin', 10)
+sw = $render.get_default('stroke_width', 5)
+linestyle = "fill=\"none\" stroke=\"#000000\" stroke-width=\"#{sw}\""
+nodestyle = "fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"#{sw}\""
+textstyle = "fill=\"#000000\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#000000\" stroke-width=\"0\" xml:space=\"preserve\""
+$render.doc.fetch('nodes', []).each do |node|
+  w = node[$render.defaults.width_key].to_i
+  h = node[$render.defaults.height_key].to_i
+  x = node['xo'].to_i
+  y = hh - node['yo'].to_i - h
+  out.push("<rect #{nodestyle} height=\"#{h}\" width=\"#{w}\" x=\"#{x}\" y=\"#{y}\"/>")
+  out.push("<text #{textstyle} x=\"#{x + hm}\" y=\"#{y + hm + fs}\">#{node.fetch('label', '')}</text>")
+end
+$render.doc.fetch('edges', []).each do |edge|
+  path = edge.fetch('path', nil)
+  next if path.nil?
+  path.each do |p|
+    p['xo'] = p['xo'].to_i.to_s
+    p['yo'] = (hh - p['yo']).to_i.to_s
+  end
+  if path.size == 2
+    out.push("<line #{linestyle} x1=\"#{path[0]['xo']}\" x2=\"#{path[1]['xo']}\" y1=\"#{path[0]['yo']}\" y2=\"#{path[1]['yo']}\"/>")
+    next
+  end
+  pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
+  out.push("<polyline #{linestyle} points=\"#{pts.join(' ')}\"/>")
+end
+out.join("\n")
+%>
+</svg>
+)
+  }
+end
+
+$INPUT = nil
+$TEMPLATE = nil
+$OUTPUT = nil
+$QUIET = false
+
+def main
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 26
+    opts.banner = "Usage: diagrammatron-svg [options]"
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on('-t', '--template FILE', 'Template file name. By default internal.') do |filename|
+      $TEMPLATE = filename
+    end
+    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+      $INPUT = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+      $OUTPUT = filename
+    end
+    opts.on('-q', '--quiet', 'No output except errors.') do
+      $QUIET = true
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts opts
+      $stdout.puts %Q(
+Input YAML file is expected to be the output of diagrammatron-place.
+
+Output is the file produced by the erb-template.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  doc = load_source($INPUT)
+  return 2 if doc.nil?
+  unless $TEMPLATE.nil?
+    template = load_source($TEMPLATE)
+  else
+    template = default_template
+  end
+  return 2 if template.nil?
+  template.keys.sort.each do |key|
+    next unless key.start_with? 'base64'
+    nk = key.slice(6, key.size - 6)
+    begin
+      template[nk] = Base64.strict_decode64(template[key])
+      template.delete key
+    rescue StandardError
+      $stderr.puts "Key #{key} base-64 decoding failed to key #{nk}"
+      return 2
+    end
+  end
+  defaults = Defaults.new(template)
+
+  begin
+    xcoords, ycoords, ckd2count = separate_coordinates(doc)
+  rescue StandardError
+    $stderr.puts "Error processing input."
+    return 3
+  end
+
+  return 4 unless estimate_sizes(doc, template, ckd2count, defaults)
+
+  # Make all rows the same height and all columns the same width.
+  xmax, ymax = maxima(doc, defaults)
+  apply_maxima(doc, xmax, ymax, defaults)
+
+  x2min = parallel_edge_step_minima(xcoords)
+  y2min = parallel_edge_step_minima(ycoords)
+  remap_coordinates(xcoords, xmax, x2min, defaults)
+  remap_coordinates(ycoords, ymax, y2min, defaults)
+
+  out = apply(doc, template, defaults)
+  begin
+    if $OUTPUT.nil?
+      $stdout.puts out
+    else
+      fp = Pathname.new $OUTPUT
+      fp.open('w') do |f|
+        f.puts out
+      end
+    end
+  rescue StandardError => e
+    $stderr.puts e.to_s
+    $stderr.puts "Failed to write output: #{$OUTPUT}"
+    return 5
+  end
+  return 0
+end
+
+exit(main) if (defined? $unit_test).nil?

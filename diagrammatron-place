@@ -42,11 +42,11 @@ BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do
   end
 
   def short_side
-    return [(xmax - xmin), (ymax - ymin)].min
+    return [(xmax - xmin) * $W2HRATIO, (ymax - ymin)].min
   end
 
   def long_side
-    return [(xmax - xmin), (ymax - ymin)].max
+    return [(xmax - xmin) * $W2HRATIO, (ymax - ymin)].max
   end
 
   def overlap?(bb)
@@ -244,6 +244,7 @@ end
 
 $INPUT = nil
 $OUTPUT = nil
+$W2HRATIO = 1.0
 
 def main
   parser = OptionParser.new do |opts|
@@ -252,6 +253,9 @@ def main
     opts.banner = "Usage: diagrammatron-place [options]"
     opts.separator ""
     opts.separator "Options:"
+    opts.on('-r', '--ratio VALUE', 'Node width to height ratio. Default 1.0.') do |value|
+      $W2HRATIO = value
+    end
     opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
       $INPUT = filename
     end
@@ -270,6 +274,19 @@ do not overlap.
     end
   end
   parser.parse! ARGV
+  unless $W2HRATIO.is_a? Float
+    begin
+      whratio = Float($W2HRATIO)
+      if whratio <= 0
+        $stderr.puts "Ratio must be greater than zero: #{$W2HRATIO}"
+        exit 1
+      end
+      $W2HRATIO = whratio
+    rescue StandardError
+      $stderr.puts "Ratio parameter not a number: #{$W2HRATIO}"
+      exit 1
+    end
+  end
 
   doc = load_source
   exit(2) if doc.nil?
