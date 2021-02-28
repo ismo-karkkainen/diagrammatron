@@ -23,16 +23,16 @@ Only the node names and edge end-point information is used.
 You should call the programs in the following order, as needed.
 
 * dot_json2diagrammatron converts from dot_json to diagrammtron format.
-* diagrammetron-prune removes or retains nodes/edges from diagram.
+* diagrammatron-prune removes or retains nodes/edges from diagram.
 * diagrammatron-nodes places nodes inside sub-diagrams based on distances.
 * diagrammatron-edges places edges within sub-diagrams when nodes are placed.
 * diagrammatron-place places sub-diagrams so that they do not overlap.
-* diagrammatron-svg takes the previous output and outputs a svg file.
+* diagrammatron-render takes the previous output and outputs a file.
 
 Unless you need to make changes, you can pipe the output of previous to the
 next one, such as:
 
-    dot_json2diagrammatron -i diagram.json | diagrammatron-nodes | diagrammatron-edges | diagrammatron-place | diagrammatron-svg -o diagram.svg
+    dot_json2diagrammatron -i diagram.json | diagrammatron-nodes | diagrammatron-edges | diagrammatron-place | diagrammatron-render -o diagram.svg
 
 Using diagrammatron-prune can be followed e.g. by sed with various expressions
 to modify node labels by getting rid of repetitive elements, if such are
@@ -40,6 +40,78 @@ present. If source is a graph produced by Terraform, you can get rid of the
 local values and providers as uninteresting and clean node labels via:
 
     diagrammatron-prune -i input.yaml ' provider' ' local.' 'meta.count-boundary' | sed -e 's/.root. //g' -e 's/ .expand.//g' > output.yaml
+
+All programs are designed to retain the source fields that they do not use.
+
+## dot_json2diagrammatron
+
+Thus far tested with Terraform output. Tries to get first "name", then "label"
+and if neither are present, defaults to "node N" where N is the index of the
+node in the source array, and stores it in "label". Retains "shape".
+
+For edges, retains only head and tail and stores the node labels in "between".
+
+## diagrammatron-prune
+
+Looks for given patterns in node labels and removes those. Removes the edges
+as well so that the diagram remains intact. Use with sed to rename the nodes
+that remain for cleaner output.
+
+## diagrammatron-nodes
+
+Finds connected sub-diagrams and assigns nodes locations to "xo" and "yo"
+fields. A couple simple algorithms are available. Coordinates indicate the
+ordering of nodes and not where they should actually be located. Disjoint
+sub-diagrams will be placed on top of each other.
+
+## diagrammatron-edges
+
+Places edges between nodes within each connected sub-diagram by removing
+candidates that have most crossings. Each edges has only horizontal and
+vertical segments with 90-degree angles.
+
+## diagrammatron-place
+
+Places disjoint sub-diagrams in relation to each other so that they do not
+overlap. The bounding rectangle side lengths are monimized. The width to height
+ratio of the nodes can be taken into account using --ratio parameter. All
+nodes are considered point-like at this stage. Not using ratio will probably
+result in elongated output from diagrammatron-render.
+
+## diagrammatron-render
+
+Takes a template and uses it to produce an image file. Contains a template
+for SVG output. The file is in YAML format.
+
+Nodes are expected to have a field names "style" that defaults to "default"
+if missing. The style is used to find a function that assigns width and height
+to the node before final sizes are assigned. The algorithm at this point relies
+on each column having nodes of equal width and each row having nodes of equal
+height. Consequently only rectangular nodes are possible and if multiple
+external styles either must adapt to the size limitation, in the extreme case
+making all nodes have the same dimensions, or the edges will not reach the node
+side unless you perform extra processing in the template.
+
+Tempalte has "defaults" that contains some values that the program needs and
+it may also have whatever the templates need.
+
+A "sizes" field should be a mapping from style name to a function that can
+determine the size of the node. A "default" value that is used for all missing
+styles must be present. The values are erb-templates.
+
+A "template" field is an erb-string that is used for final rendering of the
+output.
+
+The template can have top-level fields that start with "base64" in which case
+the content string is decoded and assigned to field with name taken from the
+rest of the field name. Since "sizes" and "defaults" are mappings this in
+practice works for "template" field. If you need content that is problematic
+as is inside YAML in any "sizes" functions, they can refer to the decoded
+result. There are no limitations on the field names.
+
+The ERB is used with binding that contains a "$render" value. See code for what
+is actually available. See classes Defaults, SizeEstimation, and Render. You
+can access the template via "$render.defaults.template" when needed.
 
 # Requirements
 

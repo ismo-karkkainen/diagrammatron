@@ -330,13 +330,12 @@ end
 $INPUT = nil
 $TEMPLATE = nil
 $OUTPUT = nil
-$QUIET = false
 
 def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 26
-    opts.banner = "Usage: diagrammatron-svg [options]"
+    opts.banner = "Usage: diagrammatron-render [options]"
     opts.separator ""
     opts.separator "Options:"
     opts.on('-t', '--template FILE', 'Template file name. By default internal.') do |filename|
@@ -347,9 +346,6 @@ def main
     end
     opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
       $OUTPUT = filename
-    end
-    opts.on('-q', '--quiet', 'No output except errors.') do
-      $QUIET = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
