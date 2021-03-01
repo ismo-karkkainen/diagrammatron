@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+$unit_test = 0
+load '../diagrammatron-template'
+
+$context = ''
+def assert(value, expected, message)
+  condition = value == expected
+  $stdout.puts("#{condition ? 'ok' : 'fail'}: #{$context}: #{message}")
+  $stderr.puts("#{value.to_s} != #{expected.to_s}") unless condition
+  $unit_test = 1 unless condition
+  return condition
+end
+
+$context = 'aargh'
+assert(aargh("string").nil?, true, 'String, nil')
+assert(aargh([ 1, 2 ], 2), 2, 'Array, 2')
+
+$context = 'add_field'
+h = Hash.new('')
+add_field(h, 'name', 'content')
+assert(h.has_key?('base64name'), true, 'Field name receives prefix')
+assert(h['base64name'], Base64.strict_encode64('content'), 'Content encoded')
+h = Hash.new('')
+add_field(h, 'base64name', 'content')
+assert(h.has_key?('base64name'), true, 'Field name present as is')
+assert(h['base64name'], 'content', 'Content retained as is')
+
+$context = 'missing'
+h = Hash.new
+assert(missing(h), 4, 'All required missing')
+h['base64defaults'] = 0
+assert(missing(h), 4, 'defaults not missing')
+h['base64sizes'] = 0
+assert(missing(h), 4, 'template missing')
+h['base64added'] = 0
+assert(missing(h), 4, 'template missing with added')
+h['base64template'] = 0
+assert(missing(h).nil?, true, 'Nothing missing')
+h['base64extra'] = 0
+assert(missing(h).nil?, true, 'Nothing missing with extra field')
+
+exit $unit_test

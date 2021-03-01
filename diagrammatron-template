@@ -1,0 +1,137 @@
+#!/usr/bin/env ruby
+
+# Copyright 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See License.txt.
+
+require 'optparse'
+require 'yaml'
+require 'set'
+require 'pathname'
+require 'base64'
+
+def aargh(msgs, return_value = nil)
+  if msgs.is_a? Array
+    $stderr.puts (msgs.map { |a| a.to_s }).join("\n")
+  else
+    $stderr.puts msgs.to_s
+  end
+  return return_value
+end
+
+def load_source(input)
+  begin
+    if input.nil?
+      src = YAML.load($stdin)
+    else
+      src = YAML.load(File.read(input))
+    end
+  rescue Errno::ENOENT => e
+    return aargh "Could not load #{input.nil? ? 'stdin' : input}"
+  rescue StandardError => e
+    return aargh([ e, "Failed to read #{input.nil? ? 'stdin' : input}" ])
+  end
+  return aargh('Input is not a mapping.') unless src.is_a? Hash
+  return src
+end
+
+def add_field(doc, field_name, content)
+  if field_name.start_with?('base64')
+    doc[field_name] = content
+  elsif content.is_a? String
+    doc["base64#{field_name}"] = Base64.strict_encode64(content)
+  else
+    doc[field_name] = content
+  end
+end
+
+def missing(doc)
+  [ 'defaults', 'sizes', 'template' ].each do |key|
+    next if doc.has_key? key
+    next if doc.has_key? "base64#{key}"
+    return aargh("#{key} is missing", 4)
+  end
+  return nil
+end
+
+$INPUT = nil
+$OUTPUT = nil
+
+def main
+  ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 26
+    opts.banner = "Usage: diagrammatron-template [options] field-name content-file ..."
+    opts.separator ""
+    opts.separator "Options:"
+    opts.on('-r', '--root FILE', 'Starting point YAML file name.') do |filename|
+      $INPUT = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+      $OUTPUT = filename
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts opts
+      $stdout.puts %Q(
+Pairs all parameter field-names with content-files contents, starting with
+either given root YAML file or with an empty root.
+
+Any field name either in root document or in parameters is trusted to be
+base-64 encoded without further checking.
+
+Outputs a YAML-file that case be used with diagrammatron-render as a template.
+All fields are base64-encoded for safety. diagrammatron-render will decode
+them and rename the fields by removing the base64 prefix.
+
+Presence of "defaults", "sizes", and "template" fields is checked for.
+Extra fields are not restricted in any manner.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  if ARGV.size % 2 != 0
+    return aargh("Field-names and content-files count is odd.", 1)
+  end
+
+  doc = $INPUT.nil? ? Hash.new() : load_source($INPUT)
+  return 2 if doc.nil?
+
+  out = Hash.new
+  doc.each_pair do |key, value|
+    add_field(out, key, value)
+  end
+
+  (0...ARGV.size).step(2) do |k|
+    fn = ARGV[k]
+    cfn = ARGV[k + 1]
+    begin
+      c = File.read(cfn)
+    rescue Errno::ENOENT
+      return aargh("Could not read #{cfn}", 3)
+    rescue StandardError => e
+      return aargh([ e, "Failed to read #{cfn}" ], 3)
+    end
+    add_field(out, fn, c)
+  end
+
+  m = missing(out)
+  return m unless m.nil?
+
+  begin
+    if $OUTPUT.nil?
+      $stdout.puts YAML.dump(out)
+    else
+      fp = Pathname.new $OUTPUT
+      fp.open('w') do |f|
+        f.puts YAML.dump(out)
+      end
+    end
+  rescue StandardError => e
+    return aargh([ e, "Failed to write output: #{$OUTPUT.nil? ? 'stdout' : $OUTPUT}" ], 5)
+  end
+  return 0
+end
+
+exit(main) if (defined? $unit_test).nil?

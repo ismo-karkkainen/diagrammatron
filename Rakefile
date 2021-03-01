@@ -11,14 +11,14 @@ task :install do
   target = File.join(prefix, 'bin')
   puts "Using PREFIX #{prefix} to install to #{target}."
   abort("Target #{target} is not a directory.") unless File.directory? target
-  [ 'nodes', 'edges', 'place', 'prune', 'render' ].each do |suffix|
+  [ 'nodes', 'edges', 'place', 'prune', 'render', 'template' ].each do |suffix|
     install("diagrammatron-#{suffix}", target)
   end
   install('dot_json2diagrammatron', target)
 end
 
 desc 'Test.'
-task :test => [ :testnodes, :testedges, :testplace, :testprune, :testrender ] do
+task :test => [ :testnodes, :testedges, :testplace, :testprune, :testrender, :testtemplate ] do
 end
 
 desc 'Test nodes.'
@@ -44,4 +44,9 @@ end
 desc 'Test render.'
 task :testrender do
   sh './runtest.sh render'
+end
+
+desc 'Test template.'
+task :testtemplate do
+  sh './runtest.sh template'
 end

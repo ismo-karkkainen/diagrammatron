@@ -15,6 +15,10 @@ def assert(value, expected, message)
   return condition
 end
 
+$context = 'aargh'
+assert(aargh("string").nil?, true, 'String, nil')
+assert(aargh([ 1, 2 ], 2), 2, 'Array, 2')
+
 $context = 'Coordinate <=>'
 a = Coordinate.new({ :x => 0 }, :x, 1)
 b = Coordinate.new({ :x => 1 }, :x, 1)

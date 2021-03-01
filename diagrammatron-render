@@ -8,9 +8,16 @@ require 'yaml'
 require 'erb'
 require 'pathname'
 require 'set'
-require 'erb'
 require 'base64'
 
+def aargh(msgs, return_value = nil)
+  if msgs.is_a? Array
+    $stderr.puts (msgs.map { |a| a.to_s }).join("\n")
+  else
+    $stderr.puts msgs.to_s
+  end
+  return return_value
+end
 
 def load_source(input)
   begin
@@ -20,12 +27,9 @@ def load_source(input)
       src = YAML.load(File.read(input))
     end
   rescue Errno::ENOENT => e
-    $stderr.puts "Could not load #{input.nil? ? 'stdin' : input}"
-    return nil
+    return aargh "Could not load #{input.nil? ? 'stdin' : input}"
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to read #{input.nil? ? 'stdin' : input}"
-    return nil
+    return aargh([ e, "Failed to read #{input.nil? ? 'stdin' : input}" ])
   end
   return src
 end
@@ -160,8 +164,7 @@ def estimate_sizes(doc, template, ckd2count, defaults)
     begin
       eval(code, $render.get_binding)
     rescue StandardError => e
-      $stderr.puts "Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e.to_s}"
-      return false
+      return aargh("Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e.to_s}", false)
     end
   end
   $render = nil
@@ -270,41 +273,51 @@ def apply(doc, template, defaults)
   return out
 end
 
-def default_template
-  return {
-    'defaults' => {
-      'edge_gap' => 15,
-      'width_key' => 'w',
-      'height_key' => 'h',
-      'width_margin' => 10,
-      'height_margin' => 10,
-      'font_size' => 16,
-      'font_width' => 7,
-      'stroke_width' => 5
-    },
-    'sizes' => {
-      'default' => %q($render.default_size($render.node.fetch('width_scale', $render.get_default('font_width', 7)), $render.node.fetch('height_scale', $render.get_default('font_size', 16))))
-    },
-    'template' => %q(<?xml version="1.0"?>
+$default_template = {
+  'defaults' => {
+    'edge_gap' => 15,
+    'width_key' => 'w',
+    'height_key' => 'h',
+    'width_margin' => 10,
+    'height_margin' => 10,
+    'font_size' => 16,
+    'font_width' => 7,
+    'stroke_width' => 5
+  },
+  'sizes' => {
+    'default' => %q($render.default_size($render.node.fetch('width_scale', $render.get_default('font_width', 7)), $render.node.fetch('height_scale', $render.get_default('font_size', 16))))
+  },
+  'template' => %q(<?xml version="1.0"?>
 <%=
 w, hh = $render.dimensions
 hh += $render.defaults.height_margin
-out = [
-  "<svg width=\"#{w + $render.defaults.width_margin}\" height=\"#{hh}\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\">"
-]
 fs = $render.get_default('font_size', 16)
 hm = $render.get_default('height_margin', 10)
+wm = $render.get_default('width_margin', 10)
 sw = $render.get_default('stroke_width', 5)
 linestyle = "fill=\"none\" stroke=\"#000000\" stroke-width=\"#{sw}\""
 nodestyle = "fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"#{sw}\""
 textstyle = "fill=\"#000000\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#000000\" stroke-width=\"0\" xml:space=\"preserve\""
+linkstyle = "fill=\"#2020ff\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#2020ff\" stroke-width=\"0\" xml:space=\"preserve\""
+
+out = [
+  "<svg width=\"#{w + $render.defaults.width_margin}\" height=\"#{hh}\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\">"
+]
 $render.doc.fetch('nodes', []).each do |node|
   w = node[$render.defaults.width_key].to_i
   h = node[$render.defaults.height_key].to_i
   x = node['xo'].to_i
   y = hh - node['yo'].to_i - h
   out.push("<rect #{nodestyle} height=\"#{h}\" width=\"#{w}\" x=\"#{x}\" y=\"#{y}\"/>")
-  out.push("<text #{textstyle} x=\"#{x + hm}\" y=\"#{y + hm + fs}\">#{node.fetch('label', '')}</text>")
+  x += wm
+  y += hm + fs
+  label = node.fetch('label', '').encode(:xml => :text)
+  url = node.fetch('url', nil)
+  if url.nil?
+    out.push("<text #{textstyle} x=\"#{x}\" y=\"#{y}\">#{label}</text>")
+  else
+    out.push("<a xlink:href=#{url.encode(:xml => :attr)}><text #{linkstyle} x=\"#{x}\" y=\"#{y}\">#{label}</text></a>")
+  end
 end
 $render.doc.fetch('edges', []).each do |edge|
   path = edge.fetch('path', nil)
@@ -315,17 +328,16 @@ $render.doc.fetch('edges', []).each do |edge|
   end
   if path.size == 2
     out.push("<line #{linestyle} x1=\"#{path[0]['xo']}\" x2=\"#{path[1]['xo']}\" y1=\"#{path[0]['yo']}\" y2=\"#{path[1]['yo']}\"/>")
-    next
+  else
+    pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
+    out.push("<polyline #{linestyle} points=\"#{pts.join(' ')}\"/>")
   end
-  pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
-  out.push("<polyline #{linestyle} points=\"#{pts.join(' ')}\"/>")
 end
 out.join("\n")
 %>
 </svg>
 )
-  }
-end
+}
 
 $INPUT = nil
 $TEMPLATE = nil
@@ -361,11 +373,8 @@ Output is the file produced by the erb-template.
 
   doc = load_source($INPUT)
   return 2 if doc.nil?
-  unless $TEMPLATE.nil?
-    template = load_source($TEMPLATE)
-  else
-    template = default_template
-  end
+
+  template = $TEMPLATE.nil? ? $default_template : load_source($TEMPLATE)
   return 2 if template.nil?
   template.keys.sort.each do |key|
     next unless key.start_with? 'base64'
@@ -374,8 +383,7 @@ Output is the file produced by the erb-template.
       template[nk] = Base64.strict_decode64(template[key])
       template.delete key
     rescue StandardError
-      $stderr.puts "Key #{key} base-64 decoding failed to key #{nk}"
-      return 2
+      return aargh("Key #{key} base-64 decoding failed to key #{nk}", 2)
     end
   end
   defaults = Defaults.new(template)
@@ -383,8 +391,7 @@ Output is the file produced by the erb-template.
   begin
     xcoords, ycoords, ckd2count = separate_coordinates(doc)
   rescue StandardError
-    $stderr.puts "Error processing input."
-    return 3
+    return aargh("Error processing input.", 3)
   end
 
   return 4 unless estimate_sizes(doc, template, ckd2count, defaults)
@@ -409,9 +416,7 @@ Output is the file produced by the erb-template.
       end
     end
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to write output: #{$OUTPUT}"
-    return 5
+    return aargh([ e, "Failed to write output: #{$OUTPUT.nil? ? 'stdout' : $OUTPUT}" ], 5)
   end
   return 0
 end

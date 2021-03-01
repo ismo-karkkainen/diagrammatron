@@ -7,6 +7,7 @@ This is a small collection to programs to do the following:
 - Place edges between the nodes.
 - Place separate sub-diagrams so that they do not overlap.
 - Turn the resulting graph into a graphics file for viewing.
+- A helper script to make it easier to construct templates for conversion.
 
 All stages are separate programs. Input file can contain information for
 later stages as each stage only considers the part it needs and other
@@ -28,6 +29,7 @@ You should call the programs in the following order, as needed.
 * diagrammatron-edges places edges within sub-diagrams when nodes are placed.
 * diagrammatron-place places sub-diagrams so that they do not overlap.
 * diagrammatron-render takes the previous output and outputs a file.
+* diagrammatron-template can combine multiple files into a render template.
 
 Unless you need to make changes, you can pipe the output of previous to the
 next one, such as:
@@ -92,7 +94,7 @@ external styles either must adapt to the size limitation, in the extreme case
 making all nodes have the same dimensions, or the edges will not reach the node
 side unless you perform extra processing in the template.
 
-Tempalte has "defaults" that contains some values that the program needs and
+Template has "defaults" that contains some values that the program needs and
 it may also have whatever the templates need.
 
 A "sizes" field should be a mapping from style name to a function that can
@@ -112,6 +114,32 @@ result. There are no limitations on the field names.
 The ERB is used with binding that contains a "$render" value. See code for what
 is actually available. See classes Defaults, SizeEstimation, and Render. You
 can access the template via "$render.defaults.template" when needed.
+
+Default template produces a SVG file. Node "label" is used and if an "url"
+is present, then the node text becomes a link.
+
+## diagrammatron-template
+
+This is a convenience script that can be used to combine files into a single
+YAML-file to be used as a diagrammatron-render template. A root YAML document
+can be given as a starting point. The program parameters are field name and
+content file name pairs. Each file is loaded and the contents assigned to the
+named field.
+
+In practice the content files can have only strings, as there is no effort
+to check the contents. If you have YAML-snippets in separate files, it may
+be easiest just to concatenate the files.
+
+Any field either from a content file or the root YAML document that is string
+is base-64 encoded in the output file. diagrammatron-render will decode them
+and the original string is obtained.
+
+Splitting the source into multiple files may be convenient during development
+as you can have access to e.g. syntax highlighting for ERB or Ruby snippets.
+In case of the template-field value, which is treated as an ERB-template,
+it may be simpler to put pure Ruby code into another template field, and
+eval it using "$render.get_binding", keeping most of the source out of the
+ERB-template.
 
 # Requirements
 

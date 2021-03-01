@@ -1,0 +1,45 @@
+####COMMAND Invalid root template file
+####CODE 2
+####OUT
+####ERR
+Input is not a mapping.
+####COMMAND Valid root but missing fields
+####CODE 4
+####OUT
+####ERR
+sizes is missing
+####COMMAND Valid root but unpaired parameters
+####CODE 1
+####OUT
+####ERR
+Field-names and content-files count is odd.
+####COMMAND Valid root and fields
+####CODE 0
+####OUT
+---
+defaults:
+  key: value
+base64sizes: MAo=
+base64template: MQo=
+####ERR
+####COMMAND Valid encoded root and fields
+####CODE 0
+####OUT
+---
+base64defaults: content
+base64sizes: MAo=
+base64template: '1
+
+'
+####ERR
+####COMMAND Valid encoded root and fields with extra
+####CODE 0
+####OUT
+---
+base64defaults: content
+base64sizes: MAo=
+base64template: '1
+
+'
+base64extra: Mgo=
+####ERR
