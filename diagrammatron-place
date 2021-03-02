@@ -8,6 +8,10 @@ require 'yaml'
 require 'set'
 require 'pathname'
 
+def info(msg)
+  $stderr.puts(msg) unless $QUIET
+end
+
 def load_source
   begin
     if $INPUT.nil?
@@ -35,6 +39,14 @@ BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do
       (xmax < bb.xmax) ? bb.xmax : xmax,
       (ymax < bb.ymax) ? bb.ymax : ymax
     )
+  end
+
+  def width
+    return xmax - xmin
+  end
+
+  def height
+    return ymax - ymin
   end
 
   def area
@@ -128,7 +140,7 @@ def bounding_box(work, sid)
   return bb
 end
 
-def area_compare(a, b)
+def area_compare(b, a)
   d = a.area <=> b.area
   return d unless d == 0
   d = (a.xmax - a.xmin) <=> (b.xmax - b.xmin)
@@ -155,52 +167,85 @@ def overlaps(state, cand)
   return false
 end
 
-def depth_first_search(order, state, bb, small_state, small_bbox)
-  if state.size < order.size
+State = Struct.new(:state, :bbox, :used, :remaining_area) do
+  def has_key?(sid_bbox)
+    return state.has_key? sid_bbox.first
+  end
+
+  def can_improve?(small)
+    return true if small.nil?
+    must_add = [ remaining_area - (bbox.area - used), 0 ].max
+    return bbox.area + must_add < small.bbox.area
+  end
+end
+
+def depth_first_search(order, state, small, reverse = false)
+  if state.state.size < order.size
+    return small unless state.can_improve? small
     # Loop over all sids not in state and the loop over false, true.
     prev = nil
     order.each do |sb|
-      next if state.has_key? sb[0]
+      next if state.has_key? sb
       next if sb[1] == prev
       prev = sb[1]
-      state.each_value do |n|
+      state.state.each_value do |n|
         [false, true].each do |right|
+          right = not(right) if reverse
           cand = sb[1].clone
           cand.shift(right ? n.xmax : n.xmin, right ? n.ymin : n.ymax)
-          next if overlaps(state, cand) # Invalid state.
+          next if overlaps(state.state, cand) # Invalid state.
           # Did we create a worse solution?
-          bc = bb.merge(cand)
-          unless small_bbox.nil?
-            d = small_bbox.long_side <=> bc.long_side
+          bc = state.bbox.merge(cand)
+          unless small.nil?
+            d = small.bbox.long_side <=> bc.long_side
             next if d == -1
-            next if d == 0 and small_bbox.short_side <= bc.short_side
+            next if d == 0 and small.bbox.short_side <= bc.short_side
           end
-          s = state.clone
+          s = state.state.clone
           s[sb[0]] = cand
-          small_state, small_bbox = depth_first_search(
-            order, s, bc, small_state, small_bbox)
+          a = sb[1].area
+          small = depth_first_search(order,
+            State.new(s, bc, state.used + a, state.remaining_area - a),
+            small, not(reverse))
         end
       end
     end
   else # We compared with area before call so no need to do it here.
-    small_bbox = bb.clone
-    small_state = state.clone
+    small = State.new(state.state.clone, state.bbox.clone, state.used, 0)
+    info("Found (#{state.bbox.width}, #{state.bbox.height})")
   end
-  return [small_state, small_bbox]
+  return small
 end
 
 def dumb_depth_first_search(bbs)
   order = area_order(bbs)
-  small_state = nil
-  small_bbox = nil
-  prev = nil
-  order.each do |sb|
-    next if sb[1] == prev # No point trying equivalent bbox in the same spot.
-    prev = sb[1]
-    small_state, small_bbox = depth_first_search(
-      order, { sb[0] => sb[1].clone }, sb[1], small_state, small_bbox)
+  remains = (order.map { |sb| sb[1].area }).sum
+  unless $QUIET
+    sizes = [ order[0][1] ]
+    (1...order.size).each do |k|
+      next if order[k - 1][1] == order[k][1]
+      sizes.push(order[k][1])
+    end
+    sizes = sizes.map { |b| "(#{b.width}, #{b.height})" }
+    info("#{order.size} sub-diagrams total area #{remains} in sizes #{sizes.join(' ')}")
   end
-  return small_state # State is sid to final bbox mapping.
+  # At top level try only widest and tallest as in other places they can swap
+  # with a block of others in other locations.
+  widest = 0
+  tallest = 0
+  (1...order.size).each do |k|
+    widest = k if order[widest][1].width < order[k][1].width
+    tallest = k if order[tallest][1].height < order[k][1].height
+  end
+  small = nil
+  ((widest == tallest) ? [ widest ] : [ widest, tallest ]).each do |k|
+    info("Top-level candidate #{k + 1}")
+    sb = order[k]
+    a = sb[1].area
+    small = depth_first_search(order,
+      State.new({ sb[0] => sb[1].clone }, sb[1], a, remains - a), small)
+  end
+  return small.state # State is sid to final bbox mapping.
 end
 
 def shift(work, sid, dx, dy)
@@ -245,6 +290,7 @@ end
 $INPUT = nil
 $OUTPUT = nil
 $W2HRATIO = 1.0
+$QUIET = false
 
 def main
   parser = OptionParser.new do |opts|
@@ -261,6 +307,9 @@ def main
     end
     opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
       $OUTPUT = filename
+    end
+    opts.on('-q', '--quiet', 'No output except errors.') do
+      $QUIET = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts

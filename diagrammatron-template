@@ -37,10 +37,8 @@ end
 def add_field(doc, field_name, content)
   if field_name.start_with?('base64')
     doc[field_name] = content
-  elsif content.is_a? String
-    doc["base64#{field_name}"] = Base64.strict_encode64(content)
   else
-    doc[field_name] = content
+    doc["base64#{field_name}"] = Base64.strict_encode64(content)
   end
 end
 
@@ -98,11 +96,6 @@ Extra fields are not restricted in any manner.
   doc = $INPUT.nil? ? Hash.new() : load_source($INPUT)
   return 2 if doc.nil?
 
-  out = Hash.new
-  doc.each_pair do |key, value|
-    add_field(out, key, value)
-  end
-
   (0...ARGV.size).step(2) do |k|
     fn = ARGV[k]
     cfn = ARGV[k + 1]
@@ -113,19 +106,19 @@ Extra fields are not restricted in any manner.
     rescue StandardError => e
       return aargh([ e, "Failed to read #{cfn}" ], 3)
     end
-    add_field(out, fn, c)
+    add_field(doc, fn, c)
   end
 
-  m = missing(out)
+  m = missing(doc)
   return m unless m.nil?
 
   begin
     if $OUTPUT.nil?
-      $stdout.puts YAML.dump(out)
+      $stdout.puts YAML.dump(doc)
     else
       fp = Pathname.new $OUTPUT
       fp.open('w') do |f|
-        f.puts YAML.dump(out)
+        f.puts YAML.dump(doc)
       end
     end
   rescue StandardError => e

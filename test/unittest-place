@@ -5,6 +5,7 @@
 
 $unit_test = 0
 load '../diagrammatron-place'
+$QUIET = true
 
 $context = ''
 def assert(value, expected, message)
@@ -124,6 +125,12 @@ assert(bb, ba, 'Merge direction does not matter')
 bb = nb.merge(nil)
 assert(bb, nb, 'Merge with nil does nothing')
 
+$context = 'BoundingBox width'
+assert(BoundingBox.new(0, 2, 1, 4).width, 1, 'Width 1')
+
+$context = 'BoundingBox height'
+assert(BoundingBox.new(0, 2, 1, 4).height, 2, 'Height 2')
+
 $context = 'BoundingBox area'
 assert(BoundingBox.new(0, 2, 1, 4).area, 2, 'Area 2')
 
@@ -155,7 +162,7 @@ order = area_order({
   1 => BoundingBox.new(1, 1, 2, 2),
   2 => BoundingBox.new(1, 1, 2, 3)
 })
-assert(order.map() { |x| x[0] }, [1, 2, 0], 'Area sort works')
+assert(order.map() { |x| x[0] }, [0, 2, 1], 'Area sort works')
 
 $context = 'shift'
 o = work_copy(data)
@@ -183,6 +190,18 @@ s = { 0 => BoundingBox.new(1, 1, 3, 3), 1 => BoundingBox.new(4, 1, 5, 3) }
 assert(overlaps(s, BoundingBox.new(3, 2, 5, 3)), true, 'Overlaps')
 assert(overlaps(s, BoundingBox.new(3, 2, 4, 3)), false, 'Does not overlap')
 
+$context = 'State has_key?'
+s = State.new({ 1 => 0 }, BoundingBox.new(0, 0, 2, 2), 3, 2)
+assert(s.has_key?([1, nil]), true, 'Finds key 1')
+assert(s.has_key?([0, nil]), false, 'No key 0')
+
+$context = 'State can_improve?'
+s = State.new({}, BoundingBox.new(0, 0, 2, 2), 3, 2)
+s2 = State.new({}, BoundingBox.new(0, 0, 3, 2), 0, 0)
+assert(s.can_improve?(s2), true, 'Can improve')
+s = State.new({}, BoundingBox.new(0, 0, 2, 3), 3, 2)
+assert(s.can_improve?(s2), false, 'Can not improve')
+
 $context = 'depth_first_search'
 o = [
   [ 0, BoundingBox.new(0, 0, 2, 2) ],
@@ -194,11 +213,14 @@ s = {
   2 => BoundingBox.new(0, 2, 3, 3),
   1 => BoundingBox.new(2, 0, 3, 2)
 }
-st, bb = depth_first_search(o, s, BoundingBox.new(0, 0, 3, 3), nil, nil)
-assert(st, s, 'Input state when all placed')
-st.delete(1)
-st, bb = depth_first_search(o, st, BoundingBox.new(0, 0, 3, 2), nil, nil)
-assert(st, s, 'Optimal state')
+s0 = State.new(s, BoundingBox.new(0, 0, 3, 3), 9, 0)
+st = depth_first_search(o, s0, nil)
+assert(st, s0, 'Input state when all placed')
+s0.state.delete(1)
+s0.used = 7
+s0.remaining_area = 2
+s0 = depth_first_search(o, s0, nil)
+assert(st, s0, 'Optimal state')
 
 $context = 'prepare_output'
 d = data

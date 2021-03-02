@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-place"
+DN="../diagrammatron-place --quiet"
 
 (
 out() {

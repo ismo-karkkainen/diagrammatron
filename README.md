@@ -47,11 +47,11 @@ All programs are designed to retain the source fields that they do not use.
 
 ## dot_json2diagrammatron
 
-Thus far tested with Terraform output. Tries to get first "name", then "label"
-and if neither are present, defaults to "node N" where N is the index of the
-node in the source array, and stores it in "label". Retains "shape".
+For nodes, tries to get first "name", then "label" and if neither are present,
+defaults to "node N" where N is the index of the node in the source array,
+and stores it in "label".
 
-For edges, retains only head and tail and stores the node labels in "between".
+For edges, stores the node labels of "head" and "tail" in "between".
 
 ## diagrammatron-prune
 
@@ -123,16 +123,14 @@ is present, then the node text becomes a link.
 This is a convenience script that can be used to combine files into a single
 YAML-file to be used as a diagrammatron-render template. A root YAML document
 can be given as a starting point. The program parameters are field name and
-content file name pairs. Each file is loaded and the contents assigned to the
-named field.
+content file name pairs.
 
-In practice the content files can have only strings, as there is no effort
-to check the contents. If you have YAML-snippets in separate files, it may
-be easiest just to concatenate the files.
+Any field that has value other than string type must be in the root document.
+Any field with content in a file will be treated as if the field value is a
+string and the value is base-64 encoded.
 
-Any field either from a content file or the root YAML document that is string
-is base-64 encoded in the output file. diagrammatron-render will decode them
-and the original string is obtained.
+diagrammatron-render will decode base-64 encoded fields and the original string
+is obtained.
 
 Splitting the source into multiple files may be convenient during development
 as you can have access to e.g. syntax highlighting for ERB or Ruby snippets.

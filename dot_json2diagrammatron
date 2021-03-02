@@ -49,9 +49,8 @@ def convert(src)
       labels[name] = 0
     end
     idx2label[idx] = name
-    nodes.push({ 'label' => name })
-    shape = item.fetch('shape', nil)
-    nodes.last['shape'] = shape unless shape.nil?
+    item['label'] = name
+    nodes.push(item)
   end
   edges = []
   items = src.fetch('edges', [])
@@ -75,7 +74,8 @@ def convert(src)
       $stderr.puts "Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail refer to unseen object index"
       return nil
     end
-    edges.push({ 'between' => [ tail, head ] })
+    item['between'] = [ tail, head ]
+    edges.push(item)
   end
   # All compound nodes that have no edges are removed.
   compound.values.sort.reverse.each do |k|

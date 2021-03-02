@@ -25,6 +25,8 @@ ok: BoundingBox merge: y minimum unchanged
 ok: BoundingBox merge: y maximum unchanged
 ok: BoundingBox merge: Merge direction does not matter
 ok: BoundingBox merge: Merge with nil does nothing
+ok: BoundingBox width: Width 1
+ok: BoundingBox height: Height 2
 ok: BoundingBox area: Area 2
 ok: BoundingBox shift: xmin increased by 2
 ok: BoundingBox shift: ymin decreased by 2
@@ -57,6 +59,10 @@ ok: shift: Edge 1 point 1 horizontal shift -1
 ok: shift: Edge 1 point 1 vertical shift 1
 ok: overlaps: Overlaps
 ok: overlaps: Does not overlap
+ok: State has_key?: Finds key 1
+ok: State has_key?: No key 0
+ok: State can_improve?: Can improve
+ok: State can_improve?: Can not improve
 ok: depth_first_search: Input state when all placed
 ok: depth_first_search: Optimal state
 ok: prepare_output: Node 0 horizontal shift

@@ -350,7 +350,7 @@ def main
     opts.banner = "Usage: diagrammatron-render [options]"
     opts.separator ""
     opts.separator "Options:"
-    opts.on('-t', '--template FILE', 'Template file name. By default internal.') do |filename|
+    opts.on('-t', '--template FILE', 'Template file name. Internal SVG if not given.') do |filename|
       $TEMPLATE = filename
     end
     opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
