@@ -281,8 +281,8 @@ $default_template = {
     'width_margin' => 10,
     'height_margin' => 10,
     'font_size' => 16,
-    'font_width' => 7,
-    'stroke_width' => 5
+    'font_width' => 8,
+    'stroke_width' => 2
   },
   'sizes' => {
     'default' => %q($render.default_size($render.node.fetch('width_scale', $render.get_default('font_width', 7)), $render.node.fetch('height_scale', $render.get_default('font_size', 16))))
@@ -346,17 +346,17 @@ $OUTPUT = nil
 def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
-    opts.summary_width = 26
+    opts.summary_width = 20
     opts.banner = "Usage: diagrammatron-render [options]"
     opts.separator ""
     opts.separator "Options:"
     opts.on('-t', '--template FILE', 'Template file name. Internal SVG if not given.') do |filename|
       $TEMPLATE = filename
     end
-    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+    opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
       $INPUT = filename
     end
-    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
       $OUTPUT = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do

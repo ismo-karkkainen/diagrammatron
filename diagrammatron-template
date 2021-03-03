@@ -58,14 +58,14 @@ def main
   ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
-    opts.summary_width = 26
+    opts.summary_width = 20
     opts.banner = "Usage: diagrammatron-template [options] field-name content-file ..."
     opts.separator ""
     opts.separator "Options:"
     opts.on('-r', '--root FILE', 'Starting point YAML file name.') do |filename|
       $INPUT = filename
     end
-    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
       $OUTPUT = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do

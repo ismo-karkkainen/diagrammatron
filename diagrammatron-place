@@ -217,18 +217,21 @@ def depth_first_search(order, state, small, reverse = false)
   return small
 end
 
+def diagram_info(order, remains)
+  return if $QUIET
+  sizes = [ order[0][1] ]
+  (1...order.size).each do |k|
+    next if order[k - 1][1] == order[k][1]
+    sizes.push(order[k][1])
+  end
+  sizes = sizes.map { |b| "(#{b.width}, #{b.height})" }
+  info("#{order.size} sub-diagrams total area #{remains} in sizes #{sizes.join(' ')}")
+end
+
 def dumb_depth_first_search(bbs)
   order = area_order(bbs)
   remains = (order.map { |sb| sb[1].area }).sum
-  unless $QUIET
-    sizes = [ order[0][1] ]
-    (1...order.size).each do |k|
-      next if order[k - 1][1] == order[k][1]
-      sizes.push(order[k][1])
-    end
-    sizes = sizes.map { |b| "(#{b.width}, #{b.height})" }
-    info("#{order.size} sub-diagrams total area #{remains} in sizes #{sizes.join(' ')}")
-  end
+  diagram_info(order, remains)
   # At top level try only widest and tallest as in other places they can swap
   # with a block of others in other locations.
   widest = 0
@@ -248,15 +251,68 @@ def dumb_depth_first_search(bbs)
   return small.state # State is sid to final bbox mapping.
 end
 
-def shift(work, sid, dx, dy)
-  [ :edges, :nodes ].each do |kind|
-    work[kind].fetch(sid, []).each do |item|
-      item.shift(dx, dy)
+def tallest_and_widest(order, state)
+  widest = nil
+  tallest = nil
+  order.each do |sb|
+    next if state.has_key? sb
+    unless widest.nil?
+      widest = sb if widest[1].width < sb[1].width
+      tallest = sb if tallest[1].height < sb[1].height
+    else
+      widest = sb
+      tallest = sb
     end
   end
+  return [ tallest ] if widest[1] == tallest[1]
+  return [ tallest, widest ]
 end
 
-def place_subsets(work)
+def tall_wide_dfs(order, state, small)
+  if state.state.size < order.size
+    return small unless state.can_improve? small
+    tallest_and_widest(order, state).each do |sb|
+      state.state.each_value do |n|
+        [false, true].each do |right|
+          cand = sb[1].clone
+          cand.shift(right ? n.xmax : n.xmin, right ? n.ymin : n.ymax)
+          next if overlaps(state.state, cand) # Invalid state.
+          # Did we create a worse solution?
+          bc = state.bbox.merge(cand)
+          unless small.nil?
+            d = small.bbox.long_side <=> bc.long_side
+            next if d == -1
+            next if d == 0 and small.bbox.short_side <= bc.short_side
+          end
+          s = state.state.clone
+          s[sb[0]] = cand
+          a = sb[1].area
+          small = tall_wide_dfs(order,
+            State.new(s, bc, state.used + a, state.remaining_area - a), small)
+        end
+      end
+    end
+  else # We compared with area before call so no need to do it here.
+    small = State.new(state.state.clone, state.bbox.clone, state.used, 0)
+    info("Found (#{state.bbox.width}, #{state.bbox.height})")
+  end
+  return small
+end
+
+def tallest_widest_dfs(bbs)
+  order = area_order(bbs)
+  remains = (order.map { |sb| sb[1].area }).sum
+  diagram_info(order, remains)
+  small = nil
+  tallest_and_widest(order, State.new({})).each do |sb|
+    a = sb[1].area
+    small = tall_wide_dfs(order,
+      State.new({ sb[0] => sb[1].clone }, sb[1], a, remains - a), small)
+  end
+  return small.state # State is sid to final bbox mapping.
+end
+
+def pre_search_bounding_boxes(work)
   bbs = Hash.new
   original = Hash.new
   work[:subsets].each do |sid|
@@ -265,12 +321,35 @@ def place_subsets(work)
     bb.shift(-bb.xmin, -bb.ymin) # Ensure the corner is at (0, 0)
     bbs[sid] = bb
   end
-  bbs = dumb_depth_first_search(bbs)
+  return [ original, bbs ]
+end
+
+def shift(work, sid, dx, dy)
+  [ :edges, :nodes ].each do |kind|
+    work[kind].fetch(sid, []).each do |item|
+      item.shift(dx, dy)
+    end
+  end
+end
+
+def shift_subdiagrams(work, original, bbs)
   # Shift everything in each subset according to shift compared to original.
   original.each_pair do |sid, bbox|
     shifted = bbs[sid]
     shift(work, sid, shifted.xmin - bbox.xmin, shifted.ymin - bbox.ymin)
   end
+end
+
+def place_subsets(work)
+  original, bbs = pre_search_bounding_boxes(work)
+  bbs = dumb_depth_first_search(bbs)
+  shift_subdiagrams(work, original, bbs)
+end
+
+def tallest_widest(work)
+  original, bbs = pre_search_bounding_boxes(work)
+  bbs = tallest_widest_dfs(bbs)
+  shift_subdiagrams(work, original, bbs)
 end
 
 def prepare_output(doc, work)
@@ -287,25 +366,34 @@ def prepare_output(doc, work)
   end
 end
 
+$algorithms = {
+  'depthfirst' => method(:place_subsets),
+  'tallwide' => method(:tallest_widest)
+}
+
 $INPUT = nil
 $OUTPUT = nil
 $W2HRATIO = 1.0
 $QUIET = false
+$ALGO = 'tallwide'
 
 def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
-    opts.summary_width = 26
+    opts.summary_width = 20
     opts.banner = "Usage: diagrammatron-place [options]"
     opts.separator ""
     opts.separator "Options:"
+    opts.on('-a', '--algorithm NAME', "Subdiagram placement algoritm. Default #{$ALGO}") do |algo|
+      $ALGO = algo
+    end
     opts.on('-r', '--ratio VALUE', 'Node width to height ratio. Default 1.0.') do |value|
       $W2HRATIO = value
     end
-    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+    opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
       $INPUT = filename
     end
-    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
       $OUTPUT = filename
     end
     opts.on('-q', '--quiet', 'No output except errors.') do
@@ -314,6 +402,8 @@ def main
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
       $stdout.puts %Q(
+Algorithm names are: #{$algorithms.keys.sort.join(' ')}
+
 Input YAML file is expected to be the output of diagrammatron-edges.
 
 Output is the input file with 'xo' and 'yo' modified so that the sub-diagrams
@@ -337,6 +427,12 @@ do not overlap.
     end
   end
 
+  unless $algorithms.has_key? $ALGO
+    $stderr.puts "Unrecognized algorithm: #{$ALGO}"
+    exit(2)
+  end
+  $ALGO = $algorithms[$ALGO]
+
   doc = load_source
   exit(2) if doc.nil?
 
@@ -348,8 +444,7 @@ do not overlap.
   end
   exit(3) if work.nil?
 
-  # Eventually support more algorithms?
-  place_subsets(work)
+  $ALGO.call(work)
   prepare_output(doc, work)
   begin
     if $OUTPUT.nil?

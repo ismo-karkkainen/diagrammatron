@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-place --quiet --algorithm depthfirst"
+DN="../diagrammatron-place --quiet --algorithm tallwide"
 
 (
 out() {
@@ -11,21 +11,6 @@ out() {
   cat x2
   rm -f x1 x2
 }
-
-echo "####COMMAND Invalid ratio"
-$DN --ratio invalid > x1 2> x2 <<EOF
-EOF
-out $?
-
-echo "####COMMAND Zero ratio"
-$DN --ratio 0 > x1 2> x2 <<EOF
-EOF
-out $?
-
-echo "####COMMAND Negative ratio"
-$DN --ratio -1 > x1 2> x2 <<EOF
-EOF
-out $?
 
 echo "####COMMAND Three-subset graph"
 $DN > x1 2> x2 <<EOF

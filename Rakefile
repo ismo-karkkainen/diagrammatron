@@ -1,10 +1,5 @@
 task :default => [ :install ]
 
-def install(exe, path)
-  puts "Installing #{exe}."
-  %x(sudo install #{exe} #{path})
-end
-
 desc 'Install programs to PREFIX/bin.'
 task :install do
   prefix = ENV.fetch('PREFIX', '/usr/local')

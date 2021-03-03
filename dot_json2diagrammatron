@@ -90,14 +90,14 @@ $OUTPUT = nil
 def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
-    opts.summary_width = 26
+    opts.summary_width = 20
     opts.banner = "Usage: dot_json2diagrammatron [options]"
     opts.separator ""
     opts.separator "Options:"
-    opts.on('-i', '--input FILE', 'Input file name. By default stdin.') do |filename|
+    opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
       $INPUT = filename
     end
-    opts.on('-o', '--output FILE', 'Output file name. By default stdout.') do |filename|
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
       $OUTPUT = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
