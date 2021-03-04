@@ -169,6 +169,10 @@ Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_ind
     return false if s.range.max < range.min
     return true
   end
+
+  def increase?
+    return range[0] < range[1]
+  end
 end
 
 def segment(x0, y0, x1, y1)
@@ -236,18 +240,37 @@ Path = Struct.new(:edge_index, :ends, :segments, :id, :crosses) do
     end
   end
 
-  def end_segments(conn)
-    if conn == ends[0]
-      return [ segments[0], (segments.size > 1) ? segments[1] : nil ]
-    end
-    return [ segments.last.reverse(0), (segments.size > 1) ? segments[segments.size - 2].reverse(1) : nil ]
-  end
-
   def segment_directions(index)
     before = (index > 0) ? segments[index - 1] : nil
     after = (index + 1 < segments.size) ? segments[index + 1] : nil
     s = segments[index]
     return [ s, s.direction(before), s.direction(after) ]
+  end
+
+  def as_steps(conn)
+    # For side sorting. Two bends and after that length, bend, ...
+    v = []
+    (0...(segments.size)).each do |k|
+      s = segments[k]
+      v.push(s.length)
+      next if k + 1 == segments.size
+      mult = s.vertical ? -1 : 1
+      s1 = segments[k + 1]
+      if s.increase?
+        v.push(mult * (s1.increase? ? -1 : 1))
+      else
+        v.push(mult * (s1.increase? ? 1 : -1))
+      end
+    end
+    if conn == ends[1]
+      v.reverse!
+      if v.size > 1
+        (1...v.size).step(2) do |k|
+          v[k] = -v[k]
+        end
+      end
+    end
+    return v
   end
 end
 
@@ -371,25 +394,33 @@ def node_and_side_sets(chosen)
   return nodesides
 end
 
-def path_order_at_side(a, b, conn)
-  # Order according to next segment (looking from node) direction -1, 0, 1.
-  # First segment length on tie. Longest to center.
-  # Second segment length on tie. Longest to center.
-  a0, a1 = a.end_segments(conn)
-  b0, b1 = b.end_segments(conn)
-  ad = a0.direction(a1)
-  bd = b0.direction(b1)
-  d = ad <=> bd
-  return d unless d == 0
-  order = (ad < 0) ? 1 : -1
-  d = a0.length <=> b0.length
-  return order * d unless d == 0
-  unless a1.nil?
-    d = a1.length <=> b1.length
-    return order * d unless d == 0
+def bend_order(ad, bd)
+  while ad.size < bd.size
+    ad.push 0
   end
-  d = a.edge_index <=> b.edge_index
+  while bd.size < ad.size
+    bd.push 0
+  end
+  if ad.size == 1
+    d = ad[0] <=> bd[0]
+    return d unless d == 0
+  else
+    (1...ad.size).step(2) do |k|
+      d = ad[k] <=> bd[k]
+      return d unless d == 0
+      m = (ad[k] <= 0) ? 1 : -1
+      d = ad[k - 1] <=> bd[k - 1]
+      return m * d unless d == 0
+    end
+  end
+  return nil
+end
+
+def path_order_at_side(a, b, conn)
+  d = bend_order(a.as_steps(conn), b.as_steps(conn))
+  return d unless d.nil?
   # Paths in opposite directions and at smaller index node get reverse order.
+  d = a.edge_index <=> b.edge_index
   if a.ends[0].node_index == b.ends[1].node_index and a.ends[1].node_index == b.ends[0].node_index
     c = (d < 0) ? a : b
     if c.ends[0].node_index < c.ends[1].node_index and c.ends[0] == conn
@@ -437,6 +468,11 @@ def overlaps_set(c, others)
   return false
 end
 
+# Both ends to the same direction.
+# If one end joins with end segment, consider the coordinate.
+# Tie-breaker:
+# Otherwise consider what is the bend after the neighboring segment.
+# If turning toward this segment, then more outward than turning away.
 def group_minimal_offsets(group)
   return 0 if group.empty?
   off = Hash.new
@@ -462,6 +498,11 @@ def group_minimal_offsets(group)
   return off.keys.max
 end
 
+# Ends to opposite directions.
+# If one end joins with end segment, consider the coordinate.
+# Tie-breaker:
+# Otherwise consider what is the bend after the neighboring segment.
+# If turning toward this segment, then more outward than turning away.
 def group_stacked_offsets(group)
   return 0 if group.empty?
   group[0][0].offset = 1
@@ -472,7 +513,7 @@ def group_stacked_offsets(group)
     while 0 <= idx
       gx = group[idx][0]
       if g.range_overlap(gx)
-        break unless gx.range.min < g.range.min and g.range.max < gx.range.max
+        break #unless gx.range.min < g.range.min and g.range.max < gx.range.max
         # Fully within so there will be a crossing, so skip this and try next.
         idx -= 1
         next
@@ -500,6 +541,7 @@ def place_edges(work)
     nodesides = node_and_side_sets(chosen)
     nodesides.each_pair do |conn, paths|
       paths.sort! { |a, b| path_order_at_side(a, b, conn) }
+      paths.reverse! if conn.side_index == 1 or conn.side_index == 2
     end
     # If set has any direct paths, they must align with the opposing group.
     align_pairs = Set.new

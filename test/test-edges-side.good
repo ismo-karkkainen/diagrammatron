@@ -1,0 +1,84 @@
+####COMMAND Right side
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  sid: 0
+  xo: 0
+  yo: 4
+- label: top
+  sid: 0
+  xo: 2
+  yo: 8
+- label: up
+  sid: 0
+  xo: 2
+  yo: 6
+- label: middle
+  sid: 0
+  xo: 2
+  yo: 4
+- label: down
+  sid: 0
+  xo: 2
+  yo: 2
+- label: bottom
+  sid: 0
+  xo: 2
+  yo: 0
+edges:
+- between:
+  - one
+  - top
+  path:
+  - xo: 0.3333333333333333
+    yo: 4
+  - xo: 0.3333333333333333
+    yo: 8.5
+  - xo: 2
+    yo: 8.5
+  sid: 0
+- between:
+  - one
+  - up
+  path:
+  - xo: 0.6666666666666666
+    yo: 4
+  - xo: 0.6666666666666666
+    yo: 6.5
+  - xo: 2
+    yo: 6.5
+  sid: 0
+- between:
+  - one
+  - middle
+  path:
+  - xo: 0
+    yo: 4.5
+  - xo: 2
+    yo: 4.5
+  sid: 0
+- between:
+  - one
+  - down
+  path:
+  - xo: 0.6666666666666666
+    yo: 4
+  - xo: 0.6666666666666666
+    yo: 2.5
+  - xo: 2
+    yo: 2.5
+  sid: 0
+- between:
+  - one
+  - bottom
+  path:
+  - xo: 0.3333333333333333
+    yo: 4
+  - xo: 0.3333333333333333
+    yo: 0.5
+  - xo: 2
+    yo: 0.5
+  sid: 0
+####ERR

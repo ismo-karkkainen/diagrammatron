@@ -40,6 +40,8 @@ ok: Segment range_overlap: Overlaps when same coordinate
 ok: Segment range_overlap: No overlap when to left
 ok: Segment range_overlap: Overlaps when same coordinate 2
 ok: Segment range_overlap: No overlap when to right
+ok: Segment increase?: Increasing true
+ok: Segment increase?: Decreasing false
 ok: overlaps_set: Overlaps on touch
 ok: overlaps_set: No overlap
 ok: segment: Vertical
@@ -55,12 +57,6 @@ ok: Path: Edge index 3
 ok: Path push: Edge index set
 ok: Path push: One segment present
 ok: Path push: Two segments
-ok: Path end_segments: Global has path set
-ok: Path end_segments: Path has unique id
-ok: Path end_segments: First segment from start
-ok: Path end_segments: Second segment from start
-ok: Path end_segments: First segment from end with range and ends reversed
-ok: Path end_segments: Second segment from end with range and ends reversed
 ok: Path segment_directions: First segment
 ok: Path segment_directions: Nothing before
 ok: Path segment_directions: After increases
@@ -81,6 +77,23 @@ ok: Path store_crossings: No crossings
 ok: Path store_crossings: Crossing
 ok: Path store_crossings: Crossed id
 ok: Path store_crossings: Crosser id
+ok: Path as_steps: up, 2 left, steps 1
+ok: Path as_steps: up, 2 right, steps 1
+ok: Path as_steps: down, 2 left, steps 1
+ok: Path as_steps: down, 2 right, steps 1
+ok: Path as_steps: left, 2 left, steps 1
+ok: Path as_steps: left, 2 right, steps 1
+ok: Path as_steps: right, 2 left, steps 1
+ok: Path as_steps: right, 2 right, steps 1
+ok: bend_order: Shorter direct first
+ok: bend_order: Turn left first
+ok: bend_order: 2 left first
+ok: bend_order: 2 left first
+ok: bend_order: Short before long left
+ok: bend_order: Left before straight
+ok: bend_order: Short before long straight
+ok: bend_order: Long before short right
+ok: bend_order: Long before short right 2
 ok: condidates: 3 candidates
 ok: condidates: 2 candidates
 ok: condidates: 3 candidates
