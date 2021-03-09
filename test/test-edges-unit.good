@@ -58,8 +58,8 @@ ok: Path push: Edge index set
 ok: Path push: One segment present
 ok: Path push: Two segments
 ok: Path segment_directions: First segment
-ok: Path segment_directions: Nothing before
-ok: Path segment_directions: After increases
+ok: Path segment_directions: Nothing before (swapped)
+ok: Path segment_directions: After increases (swapped)
 ok: Path segment_directions: Second segment
 ok: Path segment_directions: Before increases
 ok: Path segment_directions: Nothing after
@@ -129,11 +129,16 @@ ok: segment_order: Shorter first in group 0
 ok: segment_order: Lower first if same length in group 0
 ok: segment_order: Smaller edge index first, group 0
 ok: segment_order: Lower first in group 1
-ok: segment_order: Shorter first in group 1
 ok: segment_order: Smaller edge index first, group 1
 ok: segment_order: Higher end first in group 2
-ok: segment_order: Longer first in group 2
+ok: segment_order: Higher minimum first in group 2
 ok: segment_order: Smaller edge index first, group 2
 ok: segment_order: Longer first in group 3
 ok: segment_order: Higher end first in group 3
+ok: GapState fitness: No crossing
+ok: GapState fitness: 1 crossing
+ok: GapState fitness: 2 crossings
+ok: GapState fitness: 1 crossing
+ok: depth_first_search: Order gets reversed
+ok: depth_first_search: Two last swapped
 ####ERR
