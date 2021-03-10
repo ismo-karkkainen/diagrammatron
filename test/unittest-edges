@@ -239,6 +239,10 @@ pll.over_other_node({ :nodes => [n, nll] }, [])
 assert(pll.as_steps(pll.ends[0]), [ 1, -1, 2, -1, 1 ], 'right, 2 left, steps 1')
 assert(pll.as_steps(pll.ends[1]), [ 1, 1, 2, 1, 1 ], 'right, 2 right, steps 1')
 
+$context = 'Path end_segment'
+assert(pll.end_segment(pll.ends[0]), pll.segments.first, 'Start segment')
+assert(pll.end_segment(pll.ends[1]), pll.segments.last, 'End segment')
+
 $context = 'bend_order'
 assert(bend_order([ 1 ], [ 2 ]), -1, 'Shorter direct first')
 assert(bend_order([ 1, 1, 1 ], [ 1, -1, 1 ]), 1, 'Turn left first')
@@ -400,8 +404,8 @@ $context = 'GapState fitness'
 sa = segment(1, 0, 3, 0)
 sb = segment(2, 0, 4, 0)
 s = [
-  [ sa, 1, sa, [0], [0] ],
-  [ sb, 1, sb, [0], [0] ]
+  [ sa, 1, sa ],
+  [ sb, 1, sb ]
 ]
 gs = GapState.new([0], 0)
 assert(gs.fitness(s, 1), 0, 'No crossing')

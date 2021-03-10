@@ -85,6 +85,8 @@ ok: Path as_steps: left, 2 left, steps 1
 ok: Path as_steps: left, 2 right, steps 1
 ok: Path as_steps: right, 2 left, steps 1
 ok: Path as_steps: right, 2 right, steps 1
+ok: Path end_segment: Start segment
+ok: Path end_segment: End segment
 ok: bend_order: Shorter direct first
 ok: bend_order: Turn left first
 ok: bend_order: 2 left first

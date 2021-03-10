@@ -279,6 +279,10 @@ Path = Struct.new(:edge_index, :ends, :segments, :id, :crosses, :steps) do
     end
     return v
   end
+
+  def end_segment(conn)
+    return (conn == ends[0]) ? segments.first : segments.last
+  end
 end
 
 def candidates(node0, node1, edge_index, work, node_subset)
@@ -493,6 +497,7 @@ end
 def zigzag_order(segments)
   return segments if segments.size < 2
   # DFS. Fitness is how many end segments cross the placed segments.
+  # Sort so that those that cross least when at start are first and vice versa.
   best = nil
   segments.each_index do |k|
     best = depth_first_search(segments, GapState.new([ k ], 0), best)
@@ -542,6 +547,7 @@ def group_stacked_offsets(group)
     group[k][0].offset = k + 1
   end
   return group.size
+  # This produces narrower gaps but they may be less clear.
   prev = group[0]
   prev[0].offset = 1
   (1...group.size).each do |k|
@@ -550,6 +556,27 @@ def group_stacked_offsets(group)
     prev = g
   end
   return prev[0].offset
+end
+
+$insignificant = 0
+def leg(a, b)
+  d = a - b
+  return 0 if d.abs < $insignificant
+  return (d < 0) ? -1 : 1
+end
+
+def surrounding_coordinates(nodesides, cc, conn, low, high)
+  nodesides[conn].each do |p|
+    c = p.end_segment(conn).offset
+    case leg(c, cc)
+    when -1
+      low = c if low < c
+    when 0 then next
+    when 1
+      high = c if c < high
+    end
+  end
+  return [ low, high ]
 end
 
 def place_edges(work)
@@ -589,25 +616,53 @@ def place_edges(work)
       direct = 0
       pair.each do |conn|
         paths = nodesides[conn]
-        # The pair has direct one-segment edge. Same count in both node sides.
+        # The pair has direct one-segment edge.
         downs.push(paths.index { |p| p.segments.size == 1 })
-        direct = -downs.last + paths.rindex { |p| p.segments.size == 1 } + 1
-        ups.push(paths.size - direct)
+        ups.push(paths.size - paths.rindex { |p| p.segments.size == 1 } - 1)
+        direct = paths.size - downs.last - ups.last # Same count for both.
       end
-      count = downs.max + direct + ups.max
+      count = [ downs.max, direct, ups.max ]
       splits[pair[0]] = count
       splits[pair[1]] = count
     end
     # End segment offsets.
     nodesides.each_pair do |conn, paths|
-      d = splits[conn] + 1
-      paths.each_index do |k|
-        s = paths[k].segments
-        ((paths[k].ends[0] == conn) ? s[0] : s.last).offset = Rational(k + 1, d)
+      d = splits[conn]
+      if d.is_a? Array
+        low, direct, high = d
+        d = d.sum + 1
+        first = paths.index { |p| p.segments.size == 1 }
+        if low > 0 and first > 0
+          step = Float(low) / first
+          n = 0.0
+          (0...first).each do |k|
+            n += step
+            paths[k].end_segment(conn).offset = Rational(n.floor.to_i, d)
+          end
+        end
+        last = paths.rindex { |p| p.segments.size == 1 } + 1
+        (first...last).each do |k|
+          paths[k].end_segment(conn).offset = Rational(low + k - first + 1, d)
+        end
+        if 0 < high and last < paths.size
+          step = Float(high) / (paths.size - last)
+          n = low + last - first + 1.0
+          (last...paths.size).each do |k|
+            paths[k].end_segment(conn).offset = Rational(n.floor.to_i, d)
+            n += step
+          end
+        end
+        splits[conn] = d - 1
+      else # Simple case where the other end does not affect.
+        d += 1
+        paths.each_index do |k|
+          paths[k].end_segment(conn).offset = Rational(k + 1, d)
+        end
       end
     end
     aling_pairs = nil
-    nodesides = nil
+    $insignificant = 0.1 / (splits.values.max + 1)
+    splits = nil
 
     gaps = {
       false => Hash.new,
@@ -659,6 +714,52 @@ def place_edges(work)
       end
     end
     gaps = nil
+
+    # End segments in opposing sides may overlap if they extend enough.
+    overlapping = []
+    chosen.each_pair do |edge_index, path|
+      next if path.segments.size == 1
+      a = path.segments.first.clone
+      a.range[1] += path.segments[1].offset
+      b = path.segments.last.clone
+      b.range[0] += path.segments[path.segments.size - 2].offset
+      ac = a.cc + a.offset
+      bc = b.cc + b.offset
+      chosen.each_pair do |index, p|
+        next if index <= edge_index
+        next if p.segments.size == 1
+        c = p.segments.first.clone
+        c.range[1] += p.segments[1].offset
+        d = p.segments.last.clone
+        d.range[0] += p.segments[p.segments.size - 2].offset
+        cc = c.cc + c.offset
+        dc = d.cc + d.offset
+        if a.vertical == c.vertical and leg(ac, cc) == 0 and a.range_overlap(c) and path.ends[0].node_index != p.ends[0].node_index
+          overlapping.push([ edge_index, path.ends[0], index, p.ends[0] ])
+        end
+        if b.vertical == c.vertical and leg(bc, cc) == 0 and b.range_overlap(c) and path.ends[1].node_index != p.ends[0].node_index
+          overlapping.push([ edge_index, path.ends[1], index, p.ends[0] ])
+        end
+        if a.vertical == d.vertical and leg(ac, dc) == 0 and a.range_overlap(d) and path.ends[0].node_index != p.ends[1].node_index
+          overlapping.push([ edge_index, path.ends[0], index, p.ends[1] ])
+        end
+        if b.vertical == d.vertical and leg(bc, dc) == 0 and b.range_overlap(d) and path.ends[1].node_index != p.ends[1].node_index
+          overlapping.push([ edge_index, path.ends[1], index, p.ends[1] ])
+        end
+      end
+    end
+    # Place each overlapping pair offsets in range between closest coordinates.
+    overlapping.each do |s|
+      index_low, end_low, index_high, end_high = s
+      cc = chosen[index_low].end_segment(end_low).offset
+      low, high = surrounding_coordinates(nodesides, cc, end_low, 0, 1)
+      low, high = surrounding_coordinates(nodesides, cc, end_high, low, high)
+      r = high - low
+      chosen[index_low].end_segment(end_low).offset = low + 0.333333 * r
+      chosen[index_high].end_segment(end_high).offset = low + 0.666666 * r
+    end
+    nodesides = nil
+    overlapping = nil
 
     # Convert each path to coordinate object array with offset added.
     chosen.each_pair do |edge_index, path|
