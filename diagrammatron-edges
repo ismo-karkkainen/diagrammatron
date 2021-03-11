@@ -558,6 +558,34 @@ def group_stacked_offsets(group)
   return prev[0].offset
 end
 
+def direct_range(paths)
+  return [ paths.index { |p| p.segments.size == 1 }, paths.rindex { |p| p.segments.size == 1 }, paths.size ]
+end
+
+def offsets(conn, paths, direct_ranges)
+  d = direct_ranges.clone
+  here = d[conn]
+  d.delete(conn)
+  opposite = d.values.first
+  dlow = [ here[0], opposite[0] ].max
+  dhigh = [ here[2] - here[1], opposite[2] - opposite[1] ].max - 1
+  d = dlow + here[1] - here[0] + dhigh + 1
+  low, high, size = here
+  offsets = []
+  (0...low).each do |k|
+    offsets.push(Rational((k + 1) * dlow, (d + 1) * low))
+  end
+  (low..high).each do |k|
+    offsets.push(Rational(k + 1 - low + dlow, d + 1))
+  end
+  base = offsets.last
+  step = (1 - base) / (paths.size - high)
+  ((high + 1)...paths.size).each do |k|
+    offsets.push(base + (k - high) * step)
+  end
+  return [ offsets, d ]
+end
+
 $insignificant = 0
 def leg(a, b)
   d = a - b
@@ -610,49 +638,22 @@ def place_edges(work)
       end
     end
     align_pairs.each do |pair|
-      # We need the direct count + maxima of bent edges on each side.
-      downs = []
-      ups = []
-      direct = 0
+      count = Hash.new
       pair.each do |conn|
-        paths = nodesides[conn]
-        # The pair has direct one-segment edge.
-        downs.push(paths.index { |p| p.segments.size == 1 })
-        ups.push(paths.size - paths.rindex { |p| p.segments.size == 1 } - 1)
-        direct = paths.size - downs.last - ups.last # Same count for both.
+        count[conn] = direct_range(nodesides[conn])
       end
-      count = [ downs.max, direct, ups.max ]
       splits[pair[0]] = count
       splits[pair[1]] = count
     end
     # End segment offsets.
     nodesides.each_pair do |conn, paths|
       d = splits[conn]
-      if d.is_a? Array
-        low, direct, high = d
-        d = d.sum + 1
-        first = paths.index { |p| p.segments.size == 1 }
-        if low > 0 and first > 0
-          step = Float(low) / first
-          n = 0.0
-          (0...first).each do |k|
-            n += step
-            paths[k].end_segment(conn).offset = Rational(n.floor.to_i, d)
-          end
+      if d.is_a? Hash
+        off, d = offsets(conn, paths, d)
+        off.each_index do |k|
+          paths[k].end_segment(conn).offset = off[k]
         end
-        last = paths.rindex { |p| p.segments.size == 1 } + 1
-        (first...last).each do |k|
-          paths[k].end_segment(conn).offset = Rational(low + k - first + 1, d)
-        end
-        if 0 < high and last < paths.size
-          step = Float(high) / (paths.size - last)
-          n = low + last - first + 1.0
-          (last...paths.size).each do |k|
-            paths[k].end_segment(conn).offset = Rational(n.floor.to_i, d)
-            n += step
-          end
-        end
-        splits[conn] = d - 1
+        splits[conn] = d
       else # Simple case where the other end does not affect.
         d += 1
         paths.each_index do |k|

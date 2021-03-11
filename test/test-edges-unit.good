@@ -143,4 +143,16 @@ ok: GapState fitness: 2 crossings
 ok: GapState fitness: 1 crossing
 ok: depth_first_search: Order gets reversed
 ok: depth_first_search: Two last swapped
+ok: direct_range: Singleton
+ok: direct_range: First
+ok: direct_range: Second
+ok: direct_range: Two middle
+ok: offsets: One straight path
+ok: offsets: Half-point single path
+ok: offsets: Single path offset to 2/3
+ok: offsets: Two paths unaffected by 1
+ok: offsets: Two paths shifted by 2
+ok: offsets: Last path in gap
+ok: offsets: 2 and 3 with 1 common
+ok: offsets: Three paths shifted
 ####ERR
