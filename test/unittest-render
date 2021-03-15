@@ -92,6 +92,8 @@ assert(d.height_key, t['defaults']['height_key'], 'Height key is same')
 assert(d.width_margin, t['defaults']['width_margin'], 'Width margin is same')
 assert(d.height_margin, t['defaults']['height_margin'], 'Height margin is same')
 assert(d.edge_gap, t['defaults']['edge_gap'], 'Edge gap is same')
+assert(d.font.nil?, false, 'Font object exists')
+assert(d.font.size, d.font.max_ascend + d.font.descender, 'Font size ok')
 
 $context = 'maxima'
 doc = {

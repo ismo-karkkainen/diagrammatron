@@ -29,6 +29,8 @@ ok: Defaults: Height key is same
 ok: Defaults: Width margin is same
 ok: Defaults: Height margin is same
 ok: Defaults: Edge gap is same
+ok: Defaults: Font object exists
+ok: Defaults: Font size ok
 ok: maxima: x 0 maximum is 3
 ok: maxima: y 1 maximum is 4
 ok: maxima: x 2 maximum is 5
