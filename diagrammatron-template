@@ -26,9 +26,9 @@ def load_source(input)
       src = YAML.load(File.read(input))
     end
   rescue Errno::ENOENT => e
-    return aargh "Could not load #{input.nil? ? 'stdin' : input}"
+    return aargh "Could not load #{input or 'stdin'}"
   rescue StandardError => e
-    return aargh([ e, "Failed to read #{input.nil? ? 'stdin' : input}" ])
+    return aargh([ e, "Failed to read #{input or 'stdin'}" ])
   end
   return aargh('Input is not a mapping.') unless src.is_a? Hash
   return src
@@ -122,7 +122,7 @@ Extra fields are not restricted in any manner.
       end
     end
   rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{$OUTPUT.nil? ? 'stdout' : $OUTPUT}" ], 5)
+    return aargh([ e, "Failed to write output: #{$OUTPUT or 'stdout'}" ], 5)
   end
   return 0
 end

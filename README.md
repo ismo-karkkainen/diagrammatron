@@ -72,6 +72,9 @@ Places edges between nodes within each connected sub-diagram by removing
 candidates that have most crossings. Each edges has only horizontal and
 vertical segments with 90-degree angles.
 
+Currently uses very slow depth-first search to determine the order of edge
+segments with regard to each other when they are in same gap between nodes.
+
 ## diagrammatron-place
 
 Places disjoint sub-diagrams in relation to each other so that they do not

@@ -20,11 +20,11 @@ def load_source
       src = YAML.load(File.read($INPUT))
     end
   rescue Errno::ENOENT => e
-    $stderr.puts "Could not load #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    $stderr.puts "Could not load #{$INPUT or 'stdin'}"
     return nil
   rescue StandardError => e
     $stderr.puts e.to_s
-    $stderr.puts "Failed to read #{$INPUT.nil? ? 'stdin' : $INPUT}"
+    $stderr.puts "Failed to read #{$INPUT or 'stdin'}"
     return nil
   end
   return src

@@ -27,9 +27,9 @@ def load_source(input)
       src = YAML.load(File.read(input))
     end
   rescue Errno::ENOENT => e
-    return aargh "Could not load #{input.nil? ? 'stdin' : input}"
+    return aargh "Could not load #{input or 'stdin'}"
   rescue StandardError => e
-    return aargh([ e, "Failed to read #{input.nil? ? 'stdin' : input}" ])
+    return aargh([ e, "Failed to read #{input or 'stdin'}" ])
   end
   return src
 end
@@ -445,7 +445,7 @@ Output is the file produced by the erb-template.
       end
     end
   rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{$OUTPUT.nil? ? 'stdout' : $OUTPUT}" ], 5)
+    return aargh([ e, "Failed to write output: #{$OUTPUT or 'stdout'}" ], 5)
   end
   return 0
 end
