@@ -126,7 +126,7 @@ is present, then the node text becomes a link.
 This is a convenience script that can be used to combine files into a single
 YAML-file to be used as a diagrammatron-render template. A root YAML document
 can be given as a starting point. The program parameters are field name and
-content file name pairs.
+content file name pairs. The pairs list must appear last.
 
 Any field that has value other than string type must be in the root document.
 Any field with content in a file will be treated as if the field value is a
@@ -141,6 +141,15 @@ In case of the template-field value, which is treated as an ERB-template,
 it may be simpler to put pure Ruby code into another template field, and
 eval it using "$render.get_binding", keeping most of the source out of the
 ERB-template.
+
+The file internal.yaml is the same as the internal template, created from
+internal_root.yaml and internal_template.yaml by running:
+
+    diagrammatron-template --out internal.yaml --root internal_root.yaml template internal_template.yaml
+
+The sizes mapping has to have a match for each style used with nodes. You can
+point to another style, or default, by specifying the style name. That allows
+you to use the same function multiple times.
 
 # Requirements
 

@@ -1,0 +1,18 @@
+defaults:
+  edge_gap: 20
+  width_margin: 10
+  height_margin: 10
+  font:
+    font_size: 16
+  stroke_width: 2
+  width_key: w
+  height_key: h
+sizes:
+  default: |
+    $render.default_size(
+    $render.node.fetch('width_scale', $render.defaults.font.width),
+    $render.node.fetch('height_scale', $render.defaults.font.size),
+    $render.node.fetch('line_spacing', $render.defaults.font.line_spacing),
+    $render.node.fetch('width_margin', $render.defaults.width_margin),
+    $render.node.fetch('height_margin', $render.defaults.height_margin),
+    $render.node.fetch('edge_gap', $render.defaults.edge_gap))

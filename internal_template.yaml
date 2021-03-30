@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<%=
+w, hh = $render.dimensions
+hm = $render.defaults.height_margin
+hh += hm
+ma = $render.defaults.font.max_ascend
+fs = $render.defaults.font.size
+lh = fs + $render.defaults.font.line_spacing
+wm = $render.defaults.width_margin
+sw = $render.get_default('stroke_width', 5)
+linestyle = "fill=\"none\" stroke=\"#000000\" stroke-width=\"#{sw}\""
+nodestyle = "fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"#{sw}\""
+textstyle = "fill=\"#000000\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#000000\" stroke-width=\"0\" xml:space=\"preserve\""
+linkstyle = "fill=\"#2020ff\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#2020ff\" stroke-width=\"0\" xml:space=\"preserve\""
+
+out = [
+  "<svg width=\"#{w + $render.defaults.width_margin}\" height=\"#{hh}\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\">"
+]
+$render.doc.fetch('nodes', []).each do |node|
+  w = node[$render.defaults.width_key].to_i
+  h = node[$render.defaults.height_key].to_i
+  x = node['xo'].to_i
+  y = hh - node['yo'].to_i - h
+  out.push("<rect #{nodestyle} height=\"#{h}\" width=\"#{w}\" x=\"#{x}\" y=\"#{y}\"/>")
+  x += wm
+  y += hm + ma # Baseline for first line.
+  url = node.fetch('url', nil)
+  url.encode!(:xml => :attr) unless url.nil?
+  lines = node.fetch('label', '').split("\n")
+  y0 = y
+  lines.each do |label|
+    label.encode!(:xml => :text)
+    if url.nil?
+      out.push("<text #{textstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text>")
+    else
+      out.push("<a xlink:href=#{url}><text #{linkstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text></a>")
+    end
+    y0 += lh # Shift baseline by full line + spacing height.
+  end
+end
+$render.doc.fetch('edges', []).each do |edge|
+  path = edge.fetch('path', nil)
+  next if path.nil?
+  path.each do |p|
+    p['xo'] = p['xo'].to_i.to_s
+    p['yo'] = (hh - p['yo']).to_i.to_s
+  end
+  if path.size == 2
+    out.push("<line #{linestyle} x1=\"#{path[0]['xo']}\" x2=\"#{path[1]['xo']}\" y1=\"#{path[0]['yo']}\" y2=\"#{path[1]['yo']}\"/>")
+  else
+    pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
+    out.push("<polyline #{linestyle} points=\"#{pts.join(' ')}\"/>")
+  end
+end
+out.join("\n")
+%>
+</svg>

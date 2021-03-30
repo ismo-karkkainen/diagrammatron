@@ -176,6 +176,9 @@ def estimate_sizes(doc, template, ckd2count, defaults)
     style = node.fetch('style', 'default')
     code = sizes.fetch(style, defaults.fetch('size', 
       %Q(raise NotImplementedError, "No size estimator for style: #{style}")))
+    if sizes.has_key? code
+      code = sizes.fetch(code)
+    end
     code = code.join("\n") if code.is_a? Array
     begin
       eval(code, $render.get_binding)
