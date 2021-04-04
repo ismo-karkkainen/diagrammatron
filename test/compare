@@ -53,7 +53,7 @@ def compare_arrays(exp, res)
     return false
   end
   exp.each_index do |k|
-    if exp[k] != res[k]
+    if exp[k].strip != res[k].strip
       STDERR.puts "Mismatch in line #{k + 1}"
       return false
     end
