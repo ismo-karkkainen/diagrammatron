@@ -33,7 +33,7 @@ $render.doc.fetch('nodes', []).each do |node|
     if url.nil?
       out.push("<text #{textstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text>")
     else
-      out.push("<a xlink:href=#{url}><text #{linkstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text></a>")
+      out.push("<a xlink:href=#{url} target=\"_parent\"><text #{linkstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text></a>")
     end
     y0 += lh # Shift baseline by full line + spacing height.
   end

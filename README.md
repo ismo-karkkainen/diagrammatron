@@ -86,7 +86,7 @@ result in elongated output from diagrammatron-render.
 ## diagrammatron-render
 
 Takes a template and uses it to produce an image file. Contains a template
-for SVG output. The file is in YAML format.
+for SVG 1.1 output for convenience. The file is in YAML format.
 
 Nodes are expected to have a field names "style" that defaults to "default"
 if missing. The style is used to find a function that assigns width and height
@@ -142,14 +142,17 @@ it may be simpler to put pure Ruby code into another template field, and
 eval it using "$render.get_binding", keeping most of the source out of the
 ERB-template.
 
+The sizes mapping has to have a match for each style used with nodes. You can
+point to another style, or default, by specifying the style name. That allows
+you to use the same function multiple times.
+
 The file internal.yaml is the same as the internal template, created from
 internal_root.yaml and internal_template.yaml by running:
 
     diagrammatron-template --out internal.yaml --root internal_root.yaml template internal_template.yaml
 
-The sizes mapping has to have a match for each style used with nodes. You can
-point to another style, or default, by specifying the style name. That allows
-you to use the same function multiple times.
+The internal template is provided for convenience to quickly produce SVG 1.1
+files.
 
 # Requirements
 
