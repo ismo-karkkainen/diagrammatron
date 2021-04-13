@@ -8,20 +8,20 @@ fs = $render.defaults.font.size
 lh = fs + $render.defaults.font.line_spacing
 wm = $render.defaults.width_margin
 sw = $render.get_default('stroke_width', 5)
-linestyle = "fill=\"none\" stroke=\"#000000\" stroke-width=\"#{sw}\""
-nodestyle = "fill=\"#ffffff\" stroke=\"#000000\" stroke-width=\"#{sw}\""
-textstyle = "fill=\"#000000\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#000000\" stroke-width=\"0\" xml:space=\"preserve\""
-linkstyle = "fill=\"#2020ff\" font-family=\"serif\" font-size=\"#{fs}\" stroke=\"#2020ff\" stroke-width=\"0\" xml:space=\"preserve\""
+linestyle = %Q(fill="none" stroke="#000000" stroke-width="#{sw}")
+nodestyle = %Q(fill="#ffffff" stroke="#000000" stroke-width="#{sw}")
+textstyle = %Q(fill="#000000" font-family="serif" font-size="#{fs}" stroke="#000000" stroke-width="0" xml:space="preserve")
+linkstyle = %Q(fill="#2020ff" font-family="serif" font-size="#{fs}" stroke="#2020ff" stroke-width="0" xml:space="preserve")
 
 out = [
-  "<svg width=\"#{w + $render.defaults.width_margin}\" height=\"#{hh}\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" version=\"1.1\">"
+  %Q(<svg width="#{w + $render.defaults.width_margin}" height="#{hh}" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">)
 ]
 $render.doc.fetch('nodes', []).each do |node|
   w = node[$render.defaults.width_key].to_i
   h = node[$render.defaults.height_key].to_i
   x = node['xo'].to_i
   y = hh - node['yo'].to_i - h
-  out.push("<rect #{nodestyle} height=\"#{h}\" width=\"#{w}\" x=\"#{x}\" y=\"#{y}\"/>")
+  out.push(%Q(<rect #{nodestyle} height="#{h}" width="#{w}" x="#{x}" y="#{y}"/>))
   x += wm
   y += hm + ma # Baseline for first line.
   url = node.fetch('url', nil)
@@ -31,9 +31,9 @@ $render.doc.fetch('nodes', []).each do |node|
   lines.each do |label|
     label.encode!(:xml => :text)
     if url.nil?
-      out.push("<text #{textstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text>")
+      out.push(%Q(<text #{textstyle} x="#{x}" y="#{y0}">#{label}</text>))
     else
-      out.push("<a xlink:href=#{url} target=\"_parent\"><text #{linkstyle} x=\"#{x}\" y=\"#{y0}\">#{label}</text></a>")
+      out.push(%Q(<a xlink:href=#{url} target="_parent"><text #{linkstyle} x="#{x}" y="#{y0}">#{label}</text></a>))
     end
     y0 += lh # Shift baseline by full line + spacing height.
   end
@@ -46,10 +46,10 @@ $render.doc.fetch('edges', []).each do |edge|
     p['yo'] = (hh - p['yo']).to_i.to_s
   end
   if path.size == 2
-    out.push("<line #{linestyle} x1=\"#{path[0]['xo']}\" x2=\"#{path[1]['xo']}\" y1=\"#{path[0]['yo']}\" y2=\"#{path[1]['yo']}\"/>")
+    out.push(%Q(<line #{linestyle} x1="#{path[0]['xo']}" x2="#{path[1]['xo']}" y1="#{path[0]['yo']}" y2="#{path[1]['yo']}"/>))
   else
     pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
-    out.push("<polyline #{linestyle} points=\"#{pts.join(' ')}\"/>")
+    out.push(%Q(<polyline #{linestyle} points="#{pts.join(' ')}"/>))
   end
 end
 out.join("\n")
