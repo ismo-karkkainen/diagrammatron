@@ -1,4 +1,6 @@
-task :default => [ :install ]
+# frozen_string_literal: true
+
+task default: [ :install ]
 
 desc 'Install programs to PREFIX/bin.'
 task :install do
@@ -13,7 +15,7 @@ task :install do
 end
 
 desc 'Test.'
-task :test => [ :testnodes, :testedges, :testplace, :testprune, :testrender, :testtemplate ] do
+task test: %i[testnodes testedges testplace testprune testrender testtemplate] do
 end
 
 desc 'Test nodes.'

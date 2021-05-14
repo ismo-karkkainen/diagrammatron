@@ -1,12 +1,18 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See License.txt.
 
 require 'optparse'
 require 'yaml'
 require 'json'
 require 'pathname'
+
+def aargh(message, return_value = nil)
+  $stderr.puts message
+  return_value
+end
 
 def load_source
   begin
@@ -16,33 +22,27 @@ def load_source
       src = File.read($INPUT)
     end
     src = JSON.parse(src)
-  rescue Errno::ENOENT => e
-    $stderr.puts "Could not load #{$INPUT or 'stdin'}"
-    return nil
+  rescue Errno::ENOENT
+    return aargh("Could not load #{$INPUT || 'stdin'}")
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to read #{$INPUT or 'stdin'}"
-    return nil
+    return aargh("#{e}\nFailed to read #{$INPUT || 'stdin'}")
   end
-  return src
+  src
 end
 
 def convert(src)
-  idx2label = Hash.new
-  labels = Hash.new # For label collisions.
-  compound = Hash.new # For compound nodes to remove if no edges.
+  idx2label = {}
+  labels = {} # For label collisions.
+  compound = {} # For compound nodes to remove if no edges.
   nodes = []
   items = src.fetch('objects', [])
   items.each_index do |k|
     item = items[k]
     idx = item.fetch('_gvid', nil)
     name = item.fetch('name', item.fetch('label', "node #{k}"))
-    if idx.nil?
-      $stderr.puts "Object #{name} missing _gvid"
-      return nil
-    end
+    return aargh("Object #{name} missing _gvid") if idx.nil?
     compound[idx] = k if item.fetch('compound', false)
-    if labels.has_key? name
+    if labels.key? name
       labels[name] += 1
       name = "#{name}.#{labels[name]}" # Could collide here as well.
     else
@@ -58,21 +58,19 @@ def convert(src)
     item = items[k]
     tail = item.fetch('tail', nil)
     head = item.fetch('head', nil)
-    if tail.nil? or head.nil?
-      $stderr.puts "Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail missing"
-      return nil
+    if tail.nil? || head.nil?
+      return aargh("Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail missing")
     end
     next if head == tail
-    if compound.has_key? head
+    if compound.key? head
       compound.delete head
-    elsif compound.has_key? tail
+    elsif compound.key? tail
       compound.delete tail
     end
     head = idx2label.fetch(head, nil)
     tail = idx2label.fetch(tail, nil)
-    if tail.nil? or head.nil?
-      $stderr.puts "Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail refer to unseen object index"
-      return nil
+    if tail.nil? || head.nil?
+      return aargh("Edge #{k} (_gvid #{item.fetch('_gvid', 'undefined')}) head or tail refer to unseen object index")
     end
     item['between'] = [ tail, head ]
     edges.push(item)
@@ -81,7 +79,7 @@ def convert(src)
   compound.values.sort.reverse.each do |k|
     nodes.delete_at k
   end
-  return { 'edges' => edges, 'nodes' => nodes }
+  { 'edges' => edges, 'nodes' => nodes }
 end
 
 $INPUT = nil
@@ -91,9 +89,9 @@ def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
-    opts.banner = "Usage: dot_json2diagrammatron [options]"
-    opts.separator ""
-    opts.separator "Options:"
+    opts.banner = 'Usage: dot_json2diagrammatron [options]'
+    opts.separator ''
+    opts.separator 'Options:'
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
       $INPUT = filename
     end
@@ -102,7 +100,7 @@ def main
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
-      $stdout.puts %Q(
+      $stdout.puts %(
 Output is a YAML file with "name" used as "label" and "shape" used as is
 for nodes. For edges "tail" and "head" are used as the first and second element
 of "between" with the "name" as the identifier. Compound objects are ignored.
@@ -118,8 +116,7 @@ of "between" with the "name" as the identifier. Compound objects are ignored.
   begin
     out = convert(doc)
   rescue StandardError
-    out = nil
-    $stderr.puts "Error processing input."
+    out = aargh('Error processing input.')
   end
   exit(3) if out.nil?
 
@@ -133,12 +130,9 @@ of "between" with the "name" as the identifier. Compound objects are ignored.
       end
     end
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to write output: #{$OUTPUT}"
+    aargh("#{e}\nFailed to write output: #{$OUTPUT}")
     exit 4
   end
 end
 
-if (defined? $unit_test).nil?
-  main
-end
+main if (defined? $unit_test).nil?

@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See License.txt.
 
 require 'optparse'
@@ -12,43 +13,43 @@ require 'base64'
 
 def aargh(msgs, return_value = nil)
   if msgs.is_a? Array
-    $stderr.puts (msgs.map { |a| a.to_s }).join("\n")
+    $stderr.puts (msgs.map &(:to_s)).join("\n")
   else
     $stderr.puts msgs.to_s
   end
-  return return_value
+  return_value
 end
 
 def load_source(input)
   begin
     if input.nil?
-      src = YAML.load($stdin)
+      src = YAML.safe_load($stdin)
     else
-      src = YAML.load(File.read(input))
+      src = YAML.safe_load(File.read(input))
     end
-  rescue Errno::ENOENT => e
-    return aargh "Could not load #{input or 'stdin'}"
+  rescue Errno::ENOENT
+    return aargh "Could not load #{input || 'stdin'}"
   rescue StandardError => e
-    return aargh([ e, "Failed to read #{input or 'stdin'}" ])
+    return aargh([ e, "Failed to read #{input || 'stdin'}" ])
   end
-  return src
+  src
 end
 
 Coordinate = Struct.new(:object, :key, :direction) do
   def <=>(c)
     d = integer <=> c.integer
-    return d unless d == 0
+    return d unless d.zero?
     d = direction <=> c.direction
-    return d unless d == 0
-    return fraction <=> c.fraction
+    return d unless d.zero?
+    fraction <=> c.fraction
   end
 
   def integer
-    return object[key].to_int
+    object[key].to_int
   end
 
   def fraction
-    return object[key] - object[key].floor
+    object[key] - object[key].floor
   end
 end
 
@@ -56,15 +57,15 @@ def end_directions(end_point, neighbor)
   if end_point['xo'] == neighbor['xo'] # Vertical
     return [ 0, (end_point['yo'] < neighbor['yo']) ? 1 : -1 ]
   end
-  return [ (end_point['xo'] < neighbor['xo']) ? 1 : -1, 0 ]
+  [ (end_point['xo'] < neighbor['xo']) ? 1 : -1, 0 ]
 end
 
 def push_coords(xcoords, ycoords, ckd2count, object, xdirection, ydirection, node = false)
-  unless node or xdirection == 0
+  unless node || xdirection.zero?
     k = [ object['xo'], object['yo'], 'xo', xdirection ]
     ckd2count[k] = ckd2count[k] + 1
   end
-  unless node or ydirection == 0
+  unless node || ydirection.zero?
     k = [ object['xo'], object['yo'], 'yo', ydirection ]
     ckd2count[k] = ckd2count[k] + 1
   end
@@ -94,7 +95,7 @@ def separate_coordinates(doc)
   end
   xcoords.sort!
   ycoords.sort!
-  return [ xcoords, ycoords, ckd2count ]
+  [ xcoords, ycoords, ckd2count ]
 end
 
 class FontInfo
@@ -138,11 +139,11 @@ class SizeEstimation
   end
 
   def get_binding
-    return binding
+    binding
   end
 
   def get_default(key, default_value = nil)
-    return @template.fetch('defaults', {}).fetch(key, default_value)
+    @template.fetch('defaults', {}).fetch(key, default_value)
   end
 
   def max_edges(key, edge_gap)
@@ -151,18 +152,18 @@ class SizeEstimation
     c[3] = 1
     count = [ count, @ckd2count[c] ].max
     return 0 if count < 2
-    return (count - 1) * (edge_gap or @defaults.edge_gap)
+    (count - 1) * (edge_gap || @defaults.edge_gap)
   end
 
   def default_size(width_scale = nil, height_scale = nil, line_spacing = nil,
       width_margin = nil, height_margin = nil, edge_gap = nil)
     lines = @node.fetch('label', '').split("\n")
-    w = 2 * (width_margin or @defaults.width_margin) +
-      (width_scale or @default.font.width) * (lines.map { |s| s.size }).max
+    w = 2 * (width_margin || @defaults.width_margin) +
+      (width_scale || @default.font.width) * (lines.map &(:size)).max
     @node[@defaults.width_key] = [ w, max_edges('xo', edge_gap) ].max
-    h = 2 * (height_margin or @defaults.height_margin) +
-      (height_scale or @defaults.font.size) * lines.size +
-      (line_spacing or @defaults.font.line_spacing) * (lines.size - 1)
+    h = 2 * (height_margin || @defaults.height_margin) +
+      (height_scale || @defaults.font.size) * lines.size +
+      (line_spacing || @defaults.font.line_spacing) * (lines.size - 1)
     @node[@defaults.height_key] = [ h, max_edges('yo', edge_gap) ].max
   end
 end
@@ -175,19 +176,19 @@ def estimate_sizes(doc, template, ckd2count, defaults)
     $render.node = node
     style = node.fetch('style', 'default')
     code = sizes.fetch(style, defaults.fetch('size', 
-      %Q(raise NotImplementedError, "No size estimator for style: #{style}")))
-    if sizes.has_key? code
+      %(raise NotImplementedError, "No size estimator for style: #{style}")))
+    if sizes.key? code
       code = sizes.fetch(code)
     end
     code = code.join("\n") if code.is_a? Array
     begin
       eval(code, $render.get_binding)
     rescue StandardError => e
-      return aargh("Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e.to_s}", false)
+      return aargh("Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e}", false)
     end
   end
   $render = nil
-  return true
+  true
 end
 
 def maxima(doc, defaults)
@@ -197,7 +198,7 @@ def maxima(doc, defaults)
     xmax[node['xo']] = [ node[defaults.width_key], xmax[node['xo']] ].max
     ymax[node['yo']] = [ node[defaults.height_key], ymax[node['yo']] ].max
   end
-  return [ xmax, ymax ]
+  [ xmax, ymax ]
 end
 
 def apply_maxima(doc, xmax, ymax, defaults)
@@ -211,11 +212,11 @@ def parallel_edge_step_minima(coords)
   c2m = Hash.new(1.0)
   coords.each do |coord|
     f = coord.fraction
-    next if f == 0
+    next if f.zero?
     ic = coord.integer
     c2m[ic] = [ c2m[ic], f ].min
   end
-  return c2m
+  c2m
 end
 
 def remap_coordinates(coords, cmax, c2min, defaults)
@@ -224,7 +225,7 @@ def remap_coordinates(coords, cmax, c2min, defaults)
   zero_after_decrease = false
   prev_dir = -2
   coords.each do |coord|
-    zero_after_decrease = true if prev_dir == -1 and coord.direction == 0
+    zero_after_decrease = true if prev_dir == -1 && coord.direction.zero?
     case coord.direction
     when -1
       c += gap if -1 < prev_dir
@@ -259,11 +260,11 @@ class Render
   end
 
   def get_binding
-    return binding
+    binding
   end
 
   def get_default(key, default_value = nil)
-    return @template.fetch('defaults', {}).fetch(key, default_value)
+    @template.fetch('defaults', {}).fetch(key, default_value)
   end
 
   def dimensions
@@ -281,7 +282,7 @@ class Render
         h = [ h, p['yo'] ].max
       end
     end
-    return [ w.to_i, h.to_i ]
+    [ w.to_i, h.to_i ]
   end
 end
 
@@ -289,7 +290,7 @@ def apply(doc, template, defaults)
   $render = Render.new(doc, template, defaults)
   out = ERB.new(template.fetch('template', '')).result($render.get_binding)
   $render = nil
-  return out
+  out
 end
 
 $default_template = {
@@ -379,9 +380,9 @@ def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
-    opts.banner = "Usage: diagrammatron-render [options]"
-    opts.separator ""
-    opts.separator "Options:"
+    opts.banner = 'Usage: diagrammatron-render [options]'
+    opts.separator ''
+    opts.separator 'Options:'
     opts.on('-t', '--template FILE', 'Template file name. Internal SVG if not given.') do |filename|
       $TEMPLATE = filename
     end
@@ -392,8 +393,7 @@ def main
       $OUTPUT = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
-      $stdout.puts opts
-      $stdout.puts %Q(
+      $stdout.puts %(#{opts}
 Input YAML file is expected to be the output of diagrammatron-place.
 
 Output is the file produced by the erb-template.
@@ -423,7 +423,7 @@ Output is the file produced by the erb-template.
   begin
     xcoords, ycoords, ckd2count = separate_coordinates(doc)
   rescue StandardError
-    return aargh("Error processing input.", 3)
+    return aargh('Error processing input.', 3)
   end
 
   return 4 unless estimate_sizes(doc, template, ckd2count, defaults)
@@ -448,9 +448,9 @@ Output is the file produced by the erb-template.
       end
     end
   rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{$OUTPUT or 'stdout'}" ], 5)
+    return aargh([ e, "Failed to write output: #{$OUTPUT || 'stdout'}" ], 5)
   end
-  return 0
+  0
 end
 
 exit(main) if (defined? $unit_test).nil?

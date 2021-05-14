@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See License.txt.
 
 require 'optparse'
@@ -11,27 +12,27 @@ require 'base64'
 
 def aargh(msgs, return_value = nil)
   if msgs.is_a? Array
-    $stderr.puts (msgs.map { |a| a.to_s }).join("\n")
+    $stderr.puts (msgs.map &:to_s).join("\n")
   else
     $stderr.puts msgs.to_s
   end
-  return return_value
+  return_value
 end
 
 def load_source(input)
   begin
     if input.nil?
-      src = YAML.load($stdin)
+      src = YAML.safe_load($stdin)
     else
-      src = YAML.load(File.read(input))
+      src = YAML.safe_load(File.read(input))
     end
-  rescue Errno::ENOENT => e
-    return aargh "Could not load #{input or 'stdin'}"
+  rescue Errno::ENOENT
+    return aargh "Could not load #{input || 'stdin'}"
   rescue StandardError => e
-    return aargh([ e, "Failed to read #{input or 'stdin'}" ])
+    return aargh([ e, "Failed to read #{input || 'stdin'}" ])
   end
   return aargh('Input is not a mapping.') unless src.is_a? Hash
-  return src
+  src
 end
 
 def add_field(doc, field_name, content)
@@ -44,11 +45,11 @@ end
 
 def missing(doc)
   [ 'defaults', 'sizes', 'template' ].each do |key|
-    next if doc.has_key? key
-    next if doc.has_key? "base64#{key}"
+    next if doc.key? key
+    next if doc.key? "base64#{key}"
     return aargh("#{key} is missing", 4)
   end
-  return nil
+  nil
 end
 
 $INPUT = nil
@@ -59,9 +60,9 @@ def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
-    opts.banner = "Usage: diagrammatron-template [options] field-name content-file ..."
-    opts.separator ""
-    opts.separator "Options:"
+    opts.banner = 'Usage: diagrammatron-template [options] field-name content-file ...'
+    opts.separator ''
+    opts.separator 'Options:'
     opts.on('-r', '--root FILE', 'Starting point YAML file name.') do |filename|
       $INPUT = filename
     end
@@ -69,8 +70,7 @@ def main
       $OUTPUT = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
-      $stdout.puts opts
-      $stdout.puts %Q(
+      $stdout.puts %(#{opts}
 Pairs all parameter field-names with content-files contents, starting with
 either given root YAML file or with an empty root.
 
@@ -89,11 +89,11 @@ Extra fields are not restricted in any manner.
   end
   parser.parse! ARGV
 
-  if ARGV.size % 2 != 0
-    return aargh("Field-names and content-files count is odd.", 1)
+  if ARGV.size.odd?
+    return aargh('Field-names and content-files count is odd.', 1)
   end
 
-  doc = $INPUT.nil? ? Hash.new() : load_source($INPUT)
+  doc = $INPUT.nil? ? {} : load_source($INPUT)
   return 2 if doc.nil?
 
   (0...ARGV.size).step(2) do |k|
@@ -124,7 +124,7 @@ Extra fields are not restricted in any manner.
   rescue StandardError => e
     return aargh([ e, "Failed to write output: #{$OUTPUT or 'stdout'}" ], 5)
   end
-  return 0
+  0
 end
 
 exit(main) if (defined? $unit_test).nil?

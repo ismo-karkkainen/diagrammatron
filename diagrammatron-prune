@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See License.txt.
 
 require 'optparse'
@@ -8,32 +9,34 @@ require 'yaml'
 require 'set'
 require 'pathname'
 
+def aargh(message, return_value = nil)
+  $stderr.puts message
+  return_value
+end
+
 def load_source
   begin
     if $INPUT.nil?
-      src = YAML.load($stdin)
+      src = YAML.safe_load($stdin)
     else
-      src = YAML.load(File.read($INPUT))
+      src = YAML.safe_load(File.read($INPUT))
     end
-  rescue Errno::ENOENT => e
-    $stderr.puts "Could not load #{$INPUT or 'stdin'}"
-    return nil
+  rescue Errno::ENOENT
+    return aargh("Could not load #{$INPUT || 'stdin'}")
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to read #{$INPUT or 'stdin'}"
-    return nil
+    return aargh("#{e}\nFailed to read #{$INPUT || 'stdin'}")
   end
-  return src
+  src
 end
 
 def prune_array(original, matching, keep)
   kept = []
   original.each_index do |k|
-    if (keep and matching[k]) or (not(keep) and not(matching[k]))
+    if (keep && matching[k]) || (!keep && !matching[k])
       kept.push original[k]
     end
   end
-  return kept
+  kept
 end
 
 def prune(doc, patterns, keep)
@@ -43,11 +46,10 @@ def prune(doc, patterns, keep)
   nodes.each_index do |k|
     label = nodes[k].fetch('label', '')
     patterns.each do |p|
-      if p.match(label)
-        matching[k] = true
-        labels.add label
-        break
-      end
+      next unless p.match(label)
+      matching[k] = true
+      labels.add label
+      break
     end
   end
   doc['nodes'] = prune_array(nodes, matching, keep)
@@ -58,9 +60,9 @@ def prune(doc, patterns, keep)
     if between.size != 2
       matching[k] = keep # Removing these suppresses later warnings.
     elsif keep
-      matching[k] = (labels.member?(between[0]) and labels.member?(between[1]))
+      matching[k] = (labels.member?(between[0]) && labels.member?(between[1]))
     else
-      matching[k] = (labels.member?(between[0]) or labels.member?(between[1]))
+      matching[k] = (labels.member?(between[0]) || labels.member?(between[1]))
     end
   end
   doc['edges'] = prune_array(edges, matching, keep)
@@ -75,9 +77,9 @@ def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
-    opts.banner = "Usage: diagrammatron-prune [options] patterns..."
-    opts.separator ""
-    opts.separator "Options:"
+    opts.banner = 'Usage: diagrammatron-prune [options] patterns...'
+    opts.separator ''
+    opts.separator 'Options:'
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
       $INPUT = filename
     end
@@ -88,8 +90,7 @@ def main
       $KEEP = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
-      $stdout.puts opts
-      $stdout.puts %Q(
+      $stdout.puts %(#{opts}
 Patterns are strings used to create Ruby Regexps.
 
 Input YAML file is expected to be dot_json2diagrammatron output.
@@ -105,17 +106,15 @@ removed or kept depending on options. Edges to removed nodes are removed.
   begin
     patterns = ARGV.map { |p| Regexp.new(p) }
   rescue StandardError => e
-    $stderr.puts "Error creating Regexp: #{e.to_s}"
-    return 1
+    return aargh("Error creating Regexp: #{e}", 1)
   end
   doc = load_source
   return 2 if doc.nil?
 
   begin
     prune(doc, patterns, $KEEP)
-  rescue StandardError => e
-    $stderr.puts "Error processing input."
-    return 3
+  rescue StandardError
+    return aargh('Error processing input.', 3)
   end
 
   begin
@@ -128,11 +127,9 @@ removed or kept depending on options. Edges to removed nodes are removed.
       end
     end
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to write output: #{$OUTPUT}"
-    return 4
+    return aargh("#{e}\nFailed to write output: #{$OUTPUT}", 4)
   end
-  return 0
+  0
 end
 
 exit(main) if (defined? $unit_test).nil?
