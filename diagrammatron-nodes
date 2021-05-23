@@ -1,12 +1,18 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See License.txt.
 
 require 'optparse'
 require 'yaml'
 require 'set'
 require 'pathname'
+
+def aargh(message, exit_code = nil)
+  $stderr.puts message
+  exit_code
+end
 
 def vertical(work)
   work[:nodes].each_index do |k|
@@ -34,13 +40,12 @@ def shortest_paths(work)
       nodes.each_index do |j|
         idx = [i, j]
         cand = dists[[i, k]] + dists[[k, j]]
-        if cand < dists[idx]
-          dists[idx] = cand
-        end
+        next unless cand < dists[idx]
+        dists[idx] = cand
       end
     end
   end
-  return dists
+  dists
 end
 
 def separate_subdiagrams(work, dists)
@@ -58,7 +63,7 @@ def separate_subdiagrams(work, dists)
     end
     subsets.push(subset.to_a)
   end
-  return subsets
+  subsets
 end
 
 def place_subset(work, dists, subset, subset_index)
@@ -74,7 +79,7 @@ def place_subset(work, dists, subset, subset_index)
     return
   end
   # Subset distances.
-  sd = Hash.new
+  sd = {}
   subset.each_index do |k|
     subset.each_index do |n|
       sd[[k, n]] = dists[[subset[k], subset[n]]]
@@ -94,24 +99,22 @@ def place_subset(work, dists, subset, subset_index)
       end
       better = false
       compares = (maxuniques.nil? ? 0 : maxuniques.size) <=> uniques.size
-      if compares < 0
+      if compares.negative?
         better = true
-      elsif compares == 0
+      elsif compares.zero?
         # We want to avoid lots of nodes in the same location.
         compares = uniques.values.max <=> maxuniques.values.max
-        if compares < 0
+        if compares.negative?
           better = true
-        elsif compares == 0
+        elsif compares.zero?
           # This could be better main tie-breaker than simple maximum.
           compares = uniques.values.sum { |v| v * v }
           better = compares < maxuniques.values.sum { |v| v * v }
         end
       end
-      if better
-        maxcover = uniques.keys.size
-        maxuniques = uniques
-        maxpair = [k, n]
-      end
+      next unless better
+      maxuniques = uniques
+      maxpair = [k, n]
     end
   end
   subset.each_index do |p|
@@ -124,35 +127,34 @@ def place_subset(work, dists, subset, subset_index)
 end
 
 def coordinate_collisions(work, subset)
-  collisions = Hash.new
+  collisions = {}
   subset.each do |p|
     xo = work[:nodes][p][:xo]
     yo = work[:nodes][p][:yo]
     c = [xo, yo]
-    collisions[c] = [] unless collisions.has_key? c
+    collisions[c] = [] unless collisions.key? c
     collisions[c].push(p)
   end
-  return collisions
+  collisions
 end
 
 def shifts(count)
   side = (count / 2.0).ceil
-  side = ((side / 4) + ((side % 4 > 0) ? 1 : 0)) * 4
+  side = ((side / 4) + ((side % 4).positive? ? 1 : 0)) * 4
   xs = Array.new(side) { |index| Integer((index - side / 2).round) }
   (0..3).each { |k| xs.push(-xs[k]) }
   ys = Array.new(xs)
   xs.rotate!(side / 2 - 1)
   ys.rotate!(side - 1) # First half-way to offset with xs, then like xs.
-  return [ xs, ys ]
+  [ xs, ys ]
 end
 
 def spread(work, indexes)
-  indexes.sort()
+  indexes.sort!
   xs, ys = shifts(indexes.size - 1)
   step = xs.size / (indexes.size - 1.0)
   loc = 0.0
-  indexes.each_index do |k|
-    next if k == 0
+  (1...indexes.size).each do |k|
     node_index = indexes[k]
     idx = loc.round
     loc += step
@@ -162,14 +164,14 @@ def spread(work, indexes)
 end
 
 def uniques(nodes, subset, key, ortho)
-  u = Hash.new
+  u = {}
   subset.each do |p|
     c = nodes[p][key]
-    u[c] = [] unless u.has_key? c
+    u[c] = [] unless u.key? c
     u[c].push(nodes[p][ortho])
   end
-  u.each_value { |v| v.sort! }
-  return u
+  u.each_value(&:sort!)
+  u
 end
 
 def overlap(a, b)
@@ -177,30 +179,30 @@ def overlap(a, b)
   b.each do |v|
     return true if seen.add?(v).nil?
   end
-  return false
+  false
 end
 
 def combinable(coords)
-  c = Hash.new
+  c = {}
   ordered = coords.keys.sort
   ordered.each_index do |k|
     n = k + 1
     break if n == ordered.size
     next if overlap(coords[ordered[k]], coords[ordered[n]])
     c[ordered[k]] = {
-      :size => coords[ordered[k]].size + coords[ordered[n]].size,
-      :next => ordered[n]
+      size: coords[ordered[k]].size + coords[ordered[n]].size,
+      next: ordered[n]
     }
   end
-  return c
+  c
 end
 
 def find_shortest(combinables)
   cand = nil
   combinables.each_pair do |coord, v|
-    cand = coord if cand.nil? or v[:size] < combinables[cand][:size]
+    cand = coord if cand.nil? || v[:size] < combinables[cand][:size]
   end
-  return cand
+  cand
 end
 
 def combine(work, subset, coord, eliminated, key)
@@ -213,7 +215,7 @@ end
 
 def reduce(work, subset)
   # Loop checking both directions until there is nothing to combine.
-  while true
+  loop do
     cx = combinable(uniques(work[:nodes], subset, :xo, :yo))
     cy = combinable(uniques(work[:nodes], subset, :yo, :xo))
     # To avoid rows/columns with few nodes, take shortest combination first.
@@ -228,15 +230,9 @@ def reduce(work, subset)
       c = cy
       key = :yo
     else
-      if ycand.nil? or cy[ycand][:size] <= cx[xcand][:size]
-        cand = xcand
-        c = cx
-        key = :xo
-      else
-        cand = xcand
-        c = cx
-        key = :xo
-      end
+      cand = xcand
+      c = cx
+      key = :xo
     end
     combine(work, subset, cand, c[cand][:next], key)
   end
@@ -246,7 +242,7 @@ def remap(work, subset, key)
   coords = Set.new
   subset.each { |p| coords.add(work[:nodes][p][key]) }
   coords = coords.to_a.sort
-  rec = Hash.new
+  rec = {}
   coords.each_index { |k| rec[coords[k]] = k }
   subset.each do |p|
     work[:nodes][p][key] = rec[work[:nodes][p][key]]
@@ -281,28 +277,18 @@ $algorithms = {
   'vertical' => method(:vertical)
 }
 
-def load_source
-  begin
-    if $INPUT.nil?
-      src = YAML.load($stdin)
-    else
-      src = YAML.load(File.read($INPUT))
-    end
-  rescue Errno::ENOENT => e
-    $stderr.puts "Could not load #{$INPUT or 'stdin'}"
-    return nil
-  rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to read #{$INPUT or 'stdin'}"
-    return nil
-  end
-  return src
+def load_source(input)
+  YAML.safe_load(input.nil? ? $stdin : File.read(input))
+rescue Errno::ENOENT
+  aargh("Could not load #{input || 'stdin'}")
+rescue StandardError => e
+  aargh("#{e}\nFailed to read #{input || 'stdin'}")
 end
 
 def work_copy(src)
-  work = { :edges => [], :nodes => [] }
+  work = { edges: [], nodes: [] }
   # Expected nodes, edges. Other pass-through.
-  label2idx = Hash.new
+  label2idx = {}
   errors = false
   edge_nodes = Set.new
   edges = src.fetch('edges', [])
@@ -311,7 +297,7 @@ def work_copy(src)
   edges.each_index do |k|
     edge = edges[k]
     labels = edge.fetch('between', [])
-    if labels.nil? or labels.size == 0
+    if labels.nil? || labels.empty?
       unedges.push(k)
     elsif labels.size == 2
       if labels.first == labels.last
@@ -319,27 +305,26 @@ def work_copy(src)
       else
         edge_nodes.add labels.first
         edge_nodes.add labels.last
-        work[:edges].push({ :idx => k, :between => [ labels[0], labels[1] ] })
+        work[:edges].push({ idx: k, between: [ labels[0], labels[1] ] })
       end
     else
-      $stderr.puts "Edge #{k + 1} does not have two labels in 'between'"
+      aargh "Edge #{k + 1} does not have two labels in 'between'"
       errors = true
-      next
     end
   end
   labeled_nodes = Set.new
   unlabeled = []
   nodes = src.fetch('nodes', [])
   nodes.each_index do |k|
-    work[:nodes].push({ :idx => k })
+    work[:nodes].push({ idx: k })
     node = nodes[k]
-    unless node.has_key? 'label'
+    unless node.key? 'label'
       unlabeled.push k
       next
     end
     label = node['label']
-    if label2idx.has_key?(label) and edge_nodes.has_key? label
-      $stderr.puts "Edge-referred label used twice: #{label}"
+    if label2idx.key?(label) && edge_nodes.key?(label)
+      aargh "Edge-referred label used twice: #{label}"
       errors = true
     end
     label2idx[label] = k
@@ -347,7 +332,7 @@ def work_copy(src)
   end
   missing = edge_nodes - labeled_nodes
   unless missing.empty?
-    $stderr.puts "Edges refer to missing node labels: #{missing.to_a.join(' ')}"
+    aargh "Edges refer to missing node labels: #{missing.to_a.join(' ')}"
     errors = true
   end
   return nil if errors
@@ -357,15 +342,15 @@ def work_copy(src)
     [ selfedges, 'edges from node to itself' ],
     [ unedges, 'edges without end-points' ]
   ].each do |x|
-    next if $QUIET or x.first.empty?
-    $stderr.puts("Note, #{x.last}: #{x.first.join(' ')}")
+    next if $QUIET || x.first.empty?
+    aargh("Note, #{x.last}: #{x.first.join(' ')}")
   end
   work[:edges].each do |edge|
     edge[:between][0] = label2idx[edge[:between][0]]
     edge[:between][1] = label2idx[edge[:between][1]]
     edge[:between].reverse! if edge[:between][1] < edge[:between][0]
   end
-  return work
+  work
 end
 
 def prepare_output(doc, work)
@@ -385,9 +370,9 @@ def main
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
-    opts.banner = "Usage: diagrammatron-nodes [options]"
-    opts.separator ""
-    opts.separator "Options:"
+    opts.banner = 'Usage: diagrammatron-nodes [options]'
+    opts.separator ''
+    opts.separator 'Options:'
     opts.on('-a', '--algorithm NAME', "Node placement algoritm. Default #{$ALGO}") do |algo|
       $ALGO = algo
     end
@@ -402,7 +387,7 @@ def main
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
-      $stdout.puts %Q(
+      $stdout.puts %(
 Algorithm names are: #{$algorithms.keys.sort.join(' ')}
 
 Input YAML file is expected to be like:
@@ -430,22 +415,20 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
   end
   parser.parse! ARGV
 
-  unless $algorithms.has_key? $ALGO
-    $stderr.puts "Unrecognized algorithm: #{$ALGO}"
-    exit(2)
+  unless $algorithms.key? $ALGO
+    return aargh("Unrecognized algorithm: #{$ALGO}", 2)
   end
   $ALGO = $algorithms[$ALGO]
 
-  doc = load_source
-  exit(2) if doc.nil?
+  doc = load_source($INPUT)
+  return 2 if doc.nil?
 
   begin
     work = work_copy(doc)
+    return 3 if work.nil?
   rescue StandardError
-    work = nil
-    $stderr.puts "Error processing input."
+    return aargh('Error processing input.', 3)
   end
-  exit(3) if work.nil?
 
   $ALGO.call(work)
   prepare_output(doc, work)
@@ -459,12 +442,9 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
       end
     end
   rescue StandardError => e
-    $stderr.puts e.to_s
-    $stderr.puts "Failed to write output: #{$OUTPUT}"
-    exit 4
+    return aargh("#{e}\nFailed to write output: #{$OUTPUT}", 4)
   end
+  0
 end
 
-if (defined? $unit_test).nil?
-  main
-end
+exit(main) if (defined? $unit_test).nil?
