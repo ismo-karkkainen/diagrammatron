@@ -59,8 +59,8 @@ ok: shift: Edge 1 point 1 horizontal shift -1
 ok: shift: Edge 1 point 1 vertical shift 1
 ok: overlaps: Overlaps
 ok: overlaps: Does not overlap
-ok: State has_key?: Finds key 1
-ok: State has_key?: No key 0
+ok: State key?: Finds key 1
+ok: State key?: No key 0
 ok: State can_improve?: Can improve
 ok: State can_improve?: Can not improve
 ok: depth_first_search: Input state when all placed

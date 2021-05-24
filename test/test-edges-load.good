@@ -1,13 +1,11 @@
 ####COMMAND Empty piped input
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Error processing input.
 ####COMMAND Empty file input
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Error processing input.
 ####COMMAND Missing input file
 ####CODE 2
 ####OUT

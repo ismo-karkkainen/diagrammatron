@@ -174,6 +174,6 @@ in question. Essentially these install some packages and then run all tests.
 
 # License
 
-Copyright (C) 2021 Ismo Kärkkäinen
+Copyright © 2021 Ismo Kärkkäinen
 
 Licensed under Universal Permissive License. See License.txt.

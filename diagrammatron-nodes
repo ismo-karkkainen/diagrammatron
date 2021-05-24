@@ -9,9 +9,9 @@ require 'yaml'
 require 'set'
 require 'pathname'
 
-def aargh(message, exit_code = nil)
+def aargh(message, return_value = nil)
   $stderr.puts message
-  exit_code
+  return_value
 end
 
 def vertical(work)
