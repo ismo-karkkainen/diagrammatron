@@ -839,12 +839,13 @@ Input YAML file is expected to be the output of diagrammatron-nodes.
   place_edges(work)
   prepare_output(doc, work)
   begin
+    d = YAML.dump(doc, line_width: 1000000)
     if $OUTPUT.nil?
-      $stdout.puts YAML.dump(doc)
+      $stdout.puts d
     else
       fp = Pathname.new $OUTPUT
       fp.open('w') do |f|
-        f.puts YAML.dump(doc)
+        f.puts d
       end
     end
   rescue StandardError => e

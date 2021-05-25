@@ -14,19 +14,12 @@ def aargh(message, return_value = nil)
   return_value
 end
 
-def load_source
-  begin
-    if $INPUT.nil?
-      src = YAML.safe_load($stdin)
-    else
-      src = YAML.safe_load(File.read($INPUT))
-    end
-  rescue Errno::ENOENT
-    return aargh("Could not load #{$INPUT || 'stdin'}")
-  rescue StandardError => e
-    return aargh("#{e}\nFailed to read #{$INPUT || 'stdin'}")
-  end
-  src
+def load_source(input)
+  YAML.safe_load(input.nil? ? $stdin : File.read(input))
+rescue Errno::ENOENT
+  aargh("Could not load #{input || 'stdin'}")
+rescue StandardError => e
+  aargh("#{e}\nFailed to read #{input || 'stdin'}")
 end
 
 def prune_array(original, matching, keep)
@@ -108,7 +101,7 @@ removed or kept depending on options. Edges to removed nodes are removed.
   rescue StandardError => e
     return aargh("Error creating Regexp: #{e}", 1)
   end
-  doc = load_source
+  doc = load_source($INPUT)
   return 2 if doc.nil?
 
   begin
@@ -118,12 +111,13 @@ removed or kept depending on options. Edges to removed nodes are removed.
   end
 
   begin
+    d = YAML.dump(doc, line_width: 1000000)
     if $OUTPUT.nil?
-      $stdout.puts YAML.dump(doc)
+      $stdout.puts d
     else
       fp = Pathname.new $OUTPUT
       fp.open('w') do |f|
-        f.puts YAML.dump(doc)
+        f.puts d
       end
     end
   rescue StandardError => e
