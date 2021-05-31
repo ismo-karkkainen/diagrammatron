@@ -172,6 +172,8 @@ Directory test/port contains scripts that are used to run tests on various
 operating systems. Each script is named after what uname returns on the OS
 in question. Essentially these install some packages and then run all tests.
 
+Test build logs can be found in [ismo-kärkkäinen.fi/diagrammatron](https://xn--ismo-krkkinen-gfbd.fi/diagrammatron/index.html).
+
 # License
 
 Copyright © 2021 Ismo Kärkkäinen
