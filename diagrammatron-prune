@@ -61,11 +61,10 @@ def prune(doc, patterns, keep)
   doc['edges'] = prune_array(edges, matching, keep)
 end
 
-$INPUT = nil
-$OUTPUT = nil
-$KEEP = false
-
 def main
+  input = nil
+  output = nil
+  keep = false
   ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -74,13 +73,13 @@ def main
     opts.separator ''
     opts.separator 'Options:'
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-r', '--reverse', 'Keep nodes that match patterns.') do
-      $KEEP = true
+      keep = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts %(#{opts}
@@ -101,27 +100,27 @@ removed or kept depending on options. Edges to removed nodes are removed.
   rescue StandardError => e
     return aargh("Error creating Regexp: #{e}", 1)
   end
-  doc = load_source($INPUT)
+  doc = load_source(input)
   return 2 if doc.nil?
 
   begin
-    prune(doc, patterns, $KEEP)
+    prune(doc, patterns, keep)
   rescue StandardError
     return aargh('Error processing input.', 3)
   end
 
   begin
     d = YAML.dump(doc, line_width: 1000000)
-    if $OUTPUT.nil?
+    if output.nil?
       $stdout.puts d
     else
-      fp = Pathname.new $OUTPUT
+      fp = Pathname.new output
       fp.open('w') do |f|
         f.puts d
       end
     end
   rescue StandardError => e
-    return aargh("#{e}\nFailed to write output: #{$OUTPUT}", 4)
+    return aargh("#{e}\nFailed to write output: #{output || 'stdout'}", 4)
   end
   0
 end

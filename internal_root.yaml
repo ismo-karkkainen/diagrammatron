@@ -7,6 +7,7 @@ defaults:
   stroke_width: 2
   width_key: w
   height_key: h
+  size: default
 sizes:
   default: |
     $render.default_size(

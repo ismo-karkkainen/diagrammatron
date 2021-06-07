@@ -52,10 +52,9 @@ def missing(doc)
   nil
 end
 
-$INPUT = nil
-$OUTPUT = nil
-
 def main
+  input = nil
+  output = nil
   ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -64,10 +63,10 @@ def main
     opts.separator ''
     opts.separator 'Options:'
     opts.on('-r', '--root FILE', 'Starting point YAML file name.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts %(#{opts}
@@ -93,7 +92,7 @@ Extra fields are not restricted in any manner.
     return aargh('Field-names and content-files count is odd.', 1)
   end
 
-  doc = $INPUT.nil? ? {} : load_source($INPUT)
+  doc = input.nil? ? {} : load_source(input)
   return 2 if doc.nil?
 
   (0...ARGV.size).step(2) do |k|
@@ -114,16 +113,16 @@ Extra fields are not restricted in any manner.
 
   begin
     d = YAML.dump(doc, line_width: 1000000)
-    if $OUTPUT.nil?
+    if output.nil?
       $stdout.puts d
     else
-      fp = Pathname.new $OUTPUT
+      fp = Pathname.new output
       fp.open('w') do |f|
         f.puts d
       end
     end
   rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{$OUTPUT or 'stdout'}" ], 5)
+    return aargh([ e, "Failed to write output: #{output || 'stdout'}" ], 5)
   end
   0
 end

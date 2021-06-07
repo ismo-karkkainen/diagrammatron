@@ -34,7 +34,7 @@ You should call the programs in the following order, as needed.
 Unless you need to make changes, you can pipe the output of previous to the
 next one, such as:
 
-    dot_json2diagrammatron -i diagram.json | diagrammatron-nodes | diagrammatron-edges | diagrammatron-place | diagrammatron-render -o diagram.svg
+    dot_json2diagrammatron -i diagram.json | diagrammatron-nodes | diagrammatron-edges | diagrammatron-place | diagrammatron-render -t internal.yaml -o diagram.svg
 
 Using diagrammatron-prune can be followed e.g. by sed with various expressions
 to modify node labels by getting rid of repetitive elements, if such are
@@ -85,8 +85,8 @@ result in elongated output from diagrammatron-render.
 
 ## diagrammatron-render
 
-Takes a template and uses it to produce an image file. Contains a template
-for SVG 1.1 output for convenience. The file is in YAML format.
+Takes a template and uses it to produce an image file. The file is in YAML
+format. The internal.yaml provided in this repository produces SVG 1.1 file.
 
 Nodes are expected to have a field names "style" that defaults to "default"
 if missing. The style is used to find a function that assigns width and height
@@ -118,8 +118,10 @@ The ERB is used with binding that contains a "$render" value. See code for what
 is actually available. See classes Defaults, SizeEstimation, and Render. You
 can access the template via "$render.defaults.template" when needed.
 
-Default template produces a SVG file. Node "label" is used and if an "url"
-is present, then the node text becomes a link.
+Example template produces a SVG file. Node "label" is used and if an "url"
+is present, then the node text becomes a link. Note that the fields that a
+template uses are arbitrary, so you can use anything you like in your own
+templates. A "fill" is used as node fill color, default is "#ffffff".
 
 ## diagrammatron-template
 
@@ -151,8 +153,7 @@ internal_root.yaml and internal_template.yaml by running:
 
     diagrammatron-template --out internal.yaml --root internal_root.yaml template internal_template.yaml
 
-The internal template is provided for convenience to quickly produce SVG 1.1
-files.
+The internal.yaml SVG 1.1 template is provided for convenience.
 
 # Requirements
 

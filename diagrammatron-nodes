@@ -285,7 +285,7 @@ rescue StandardError => e
   aargh("#{e}\nFailed to read #{input || 'stdin'}")
 end
 
-def work_copy(src)
+def work_copy(src, quiet)
   work = { edges: [], nodes: [] }
   # Expected nodes, edges. Other pass-through.
   label2idx = {}
@@ -342,7 +342,7 @@ def work_copy(src)
     [ selfedges, 'edges from node to itself' ],
     [ unedges, 'edges without end-points' ]
   ].each do |x|
-    next if $QUIET || x.first.empty?
+    next if quiet || x.first.empty?
     aargh("Note, #{x.last}: #{x.first.join(' ')}")
   end
   work[:edges].each do |edge|
@@ -361,29 +361,28 @@ def prepare_output(doc, work)
   end
 end
 
-$INPUT = nil
-$OUTPUT = nil
-$ALGO = 'pathlength'
-$QUIET = false
-
 def main
+  input = nil
+  output = nil
+  algo = 'pathlength'
+  quiet = false
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
     opts.banner = 'Usage: diagrammatron-nodes [options]'
     opts.separator ''
     opts.separator 'Options:'
-    opts.on('-a', '--algorithm NAME', "Node placement algoritm. Default #{$ALGO}") do |algo|
-      $ALGO = algo
+    opts.on('-a', '--algorithm NAME', "Node placement algoritm. Default #{algo}") do |a|
+      algo = a
     end
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-q', '--quiet', 'No output except errors.') do
-      $QUIET = true
+      quiet = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
@@ -415,35 +414,35 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
   end
   parser.parse! ARGV
 
-  unless $algorithms.key? $ALGO
-    return aargh("Unrecognized algorithm: #{$ALGO}", 2)
+  unless $algorithms.key? algo
+    return aargh("Unrecognized algorithm: #{algo}", 2)
   end
-  $ALGO = $algorithms[$ALGO]
+  algo = $algorithms[algo]
 
-  doc = load_source($INPUT)
+  doc = load_source(input)
   return 2 if doc.nil?
 
   begin
-    work = work_copy(doc)
+    work = work_copy(doc, quiet)
     return 3 if work.nil?
   rescue StandardError
     return aargh('Error processing input.', 3)
   end
 
-  $ALGO.call(work)
+  algo.call(work)
   prepare_output(doc, work)
   begin
     d = YAML.dump(doc, line_width: 1000000)
-    if $OUTPUT.nil?
+    if output.nil?
       $stdout.puts d
     else
-      fp = Pathname.new $OUTPUT
+      fp = Pathname.new output
       fp.open('w') do |f|
         f.puts d
       end
     end
   rescue StandardError => e
-    return aargh("#{e}\nFailed to write output: #{$OUTPUT}", 4)
+    return aargh("#{e}\nFailed to write output: #{output || 'stdout'}", 4)
   end
   0
 end

@@ -12,6 +12,13 @@ out() {
   rm -f x1 x2
 }
 
+echo "####COMMAND No template"
+$D > x1 2> x2 <<EOF
+---
+nodes: []
+EOF
+out $?
+
 echo "####COMMAND Invalid base64 template field"
 cat > t <<EOF
 ---
@@ -32,6 +39,7 @@ nodes:
   sid: 0
   xo: 0
   yo: 0
+  fill: "#ff00ff"
 - label: twoL
   sid: 0
   xo: 2

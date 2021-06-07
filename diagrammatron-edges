@@ -17,12 +17,12 @@ end
 def load_source(input)
   YAML.safe_load(input.nil? ? $stdin : File.read(input))
 rescue Errno::ENOENT
-  aargh "Could not load #{$INPUT || 'stdin'}"
+  aargh "Could not load #{input || 'stdin'}"
 rescue StandardError => e
-  aargh "#{e}\nFailed to read #{$INPUT || 'stdin'}"
+  aargh "#{e}\nFailed to read #{input || 'stdin'}"
 end
 
-def work_copy(src)
+def work_copy(src, quiet)
   work = { edges: {}, nodes: [] }
   # Expected nodes, edges. Other pass-through.
   label2idx = {}
@@ -98,7 +98,7 @@ def work_copy(src)
     [ selfedges, 'edges from node to itself' ],
     [ unedges, 'edges without end-points' ]
   ].each do |x|
-    next if $QUIET || x.first.empty?
+    next if quiet || x.first.empty?
     aargh("Note, #{x.last}: #{x.first.join(' ')}")
   end
   work[:edges].each_value do |edge|
@@ -796,11 +796,10 @@ def prepare_output(doc, work)
   end
 end
 
-$INPUT = nil
-$OUTPUT = nil
-$QUIET = false
-
 def main
+  input = nil
+  output = nil
+  quiet = false
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
@@ -808,13 +807,13 @@ def main
     opts.separator ''
     opts.separator 'Options:'
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-q', '--quiet', 'No output except errors.') do
-      $QUIET = true
+      quiet = true
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts %(#{opts}
@@ -826,11 +825,11 @@ Input YAML file is expected to be the output of diagrammatron-nodes.
   end
   parser.parse! ARGV
 
-  doc = load_source($INPUT)
+  doc = load_source(input)
   return 2 if doc.nil?
 
   begin
-    work = work_copy(doc)
+    work = work_copy(doc, quiet)
     return 3 if work.nil?
   rescue StandardError
     return aargh('Error processing input.', 3)
@@ -840,16 +839,16 @@ Input YAML file is expected to be the output of diagrammatron-nodes.
   prepare_output(doc, work)
   begin
     d = YAML.dump(doc, line_width: 1000000)
-    if $OUTPUT.nil?
+    if output.nil?
       $stdout.puts d
     else
-      fp = Pathname.new $OUTPUT
+      fp = Pathname.new output
       fp.open('w') do |f|
         f.puts d
       end
     end
   rescue StandardError => e
-    return aargh("#{e}\nFailed to write output: #{$OUTPUT}", 4)
+    return aargh("#{e}\nFailed to write output: #{output || 'stdout'}", 4)
   end
   0
 end

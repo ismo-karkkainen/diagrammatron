@@ -17,9 +17,9 @@ end
 def load_source(input)
   YAML.safe_load(input.nil? ? $stdin : File.read(input))
 rescue Errno::ENOENT
-  info("Could not load #{$INPUT || 'stdin'}")
+  info("Could not load #{input || 'stdin'}")
 rescue StandardError => e
-  info("#{e}\nFailed to read #{$INPUT || 'stdin'}")
+  info("#{e}\nFailed to read #{input || 'stdin'}")
 end
 
 BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do
@@ -363,30 +363,30 @@ $algorithms = {
   'tallwide' => method(:tallest_widest)
 }
 
-$INPUT = nil
-$OUTPUT = nil
 $W2HRATIO = 1.0
 $QUIET = false
-$ALGO = 'tallwide'
 
 def main
+  input = nil
+  output = nil
+  algo = 'tallwide'
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
     opts.banner = 'Usage: diagrammatron-place [options]'
     opts.separator ''
     opts.separator 'Options:'
-    opts.on('-a', '--algorithm NAME', "Subdiagram placement algoritm. Default #{$ALGO}") do |algo|
-      $ALGO = algo
+    opts.on('-a', '--algorithm NAME', "Subdiagram placement algoritm. Default #{algo}") do |a|
+      algo = a
     end
     opts.on('-r', '--ratio VALUE', 'Node width to height ratio. Default 1.0.') do |value|
       $W2HRATIO = value
     end
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-q', '--quiet', 'No output except errors.') do
       $QUIET = true
@@ -417,12 +417,12 @@ do not overlap.
     end
   end
 
-  unless $algorithms.key? $ALGO
-    return info("Unrecognized algorithm: #{$ALGO}", 2, true)
+  unless $algorithms.key? algo
+    return info("Unrecognized algorithm: #{algo}", 2, true)
   end
-  $ALGO = $algorithms[$ALGO]
+  algo = $algorithms[algo]
 
-  doc = load_source($INPUT)
+  doc = load_source(input)
   return 2 if doc.nil?
 
   begin
@@ -432,20 +432,20 @@ do not overlap.
     return info('Error processing input.', 3, true)
   end
 
-  $ALGO.call(work)
+  algo.call(work)
   prepare_output(doc, work)
   begin
     d = YAML.dump(doc, line_width: 1000000)
-    if $OUTPUT.nil?
+    if output.nil?
       $stdout.puts d
     else
-      fp = Pathname.new $OUTPUT
+      fp = Pathname.new output
       fp.open('w') do |f|
         f.puts d
       end
     end
   rescue StandardError => e
-    return info("#{e}\nFailed to write output: #{$OUTPUT}", 4, true)
+    return info("#{e}\nFailed to write output: #{output || 'stdout'}", 4, true)
   end
   0
 end
