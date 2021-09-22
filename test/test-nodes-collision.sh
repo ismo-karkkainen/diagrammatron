@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-nodes --algorithm pathlength"
+DN="../bin/diagrammatron-nodes --algorithm pathlength"
 
 (
 out() {

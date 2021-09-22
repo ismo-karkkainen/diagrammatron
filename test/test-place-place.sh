@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-place --quiet --algorithm depthfirst"
+DN="../bin/diagrammatron-place --quiet --algorithm depthfirst"
 
 (
 out() {

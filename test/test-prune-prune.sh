@@ -1,6 +1,6 @@
 #!/bin/sh
 
-D="../diagrammatron-prune"
+D="../bin/diagrammatron-prune"
 
 (
 out() {

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-nodes --algorithm vertical"
+DN="../bin/diagrammatron-nodes --algorithm vertical"
 
 (
 out() {

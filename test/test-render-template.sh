@@ -1,6 +1,6 @@
 #!/bin/sh
 
-D="../diagrammatron-render"
+D="../bin/diagrammatron-render"
 
 (
 out() {

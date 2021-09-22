@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 
 # Copyright 2021 Ismo Kärkkäinen
-# Licensed under Universal Permissive License. See License.txt.
+# Licensed under Universal Permissive License. See LICENSE.txt.
 
 $unit_test = 0
-load '../diagrammatron-place'
+load '../bin/diagrammatron-place'
 $QUIET = true
 
 $context = ''

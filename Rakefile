@@ -2,16 +2,19 @@
 
 task default: [ :install ]
 
-desc 'Install programs to PREFIX/bin.'
-task :install do
-  prefix = ENV.fetch('PREFIX', '/usr/local')
-  target = File.join(prefix, 'bin')
-  puts "Using PREFIX #{prefix} to install to #{target}."
-  abort("Target #{target} is not a directory.") unless File.directory? target
-  [ 'nodes', 'edges', 'place', 'prune', 'render', 'template' ].each do |suffix|
-    install("diagrammatron-#{suffix}", target)
-  end
-  install('dot_json2diagrammatron', target)
+desc 'Clean.'
+task :clean do
+  `rm -f diagrammatron-*.gem`
+end
+
+desc 'Build gem.'
+task gem: [:clean] do
+  `gem build diagrammatron.gemspec`
+end
+
+desc 'Build and install gem.'
+task install: [:gem] do
+  `gem install diagrammatron-*.gem`
 end
 
 desc 'Test.'

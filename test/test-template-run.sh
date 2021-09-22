@@ -1,6 +1,6 @@
 #!/bin/sh
 
-D="../diagrammatron-template"
+D="../bin/diagrammatron-template"
 
 (
 out() {

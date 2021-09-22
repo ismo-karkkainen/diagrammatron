@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-edges"
+DN="../bin/diagrammatron-edges"
 
 (
 out() {

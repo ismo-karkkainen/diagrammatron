@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DN="../diagrammatron-nodes"
+DN="../bin/diagrammatron-nodes"
 
 (
 out() {
