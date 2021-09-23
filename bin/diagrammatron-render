@@ -4,6 +4,7 @@
 # Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require '../lib/common.rb'
 require 'optparse'
 require 'yaml'
 require 'erb'
@@ -11,29 +12,6 @@ require 'pathname'
 require 'set'
 require 'base64'
 
-def aargh(msgs, return_value = nil)
-  if msgs.is_a? Array
-    $stderr.puts (msgs.map &(:to_s)).join("\n")
-  else
-    $stderr.puts msgs.to_s
-  end
-  return_value
-end
-
-def load_source(input)
-  begin
-    if input.nil?
-      src = YAML.safe_load($stdin)
-    else
-      src = YAML.safe_load(File.read(input))
-    end
-  rescue Errno::ENOENT
-    return aargh "Could not load #{input || 'stdin'}"
-  rescue StandardError => e
-    return aargh([ e, "Failed to read #{input || 'stdin'}" ])
-  end
-  src
-end
 
 Coordinate = Struct.new(:object, :key, :direction) do
   def <=>(c)

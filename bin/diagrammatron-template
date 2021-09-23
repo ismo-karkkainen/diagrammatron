@@ -4,36 +4,13 @@
 # Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require '../lib/common.rb'
 require 'optparse'
 require 'yaml'
 require 'set'
 require 'pathname'
 require 'base64'
 
-def aargh(msgs, return_value = nil)
-  if msgs.is_a? Array
-    $stderr.puts (msgs.map &:to_s).join("\n")
-  else
-    $stderr.puts msgs.to_s
-  end
-  return_value
-end
-
-def load_source(input)
-  begin
-    if input.nil?
-      src = YAML.safe_load($stdin)
-    else
-      src = YAML.safe_load(File.read(input))
-    end
-  rescue Errno::ENOENT
-    return aargh "Could not load #{input || 'stdin'}"
-  rescue StandardError => e
-    return aargh([ e, "Failed to read #{input || 'stdin'}" ])
-  end
-  return aargh('Input is not a mapping.') unless src.is_a? Hash
-  src
-end
 
 def add_field(doc, field_name, content)
   if field_name.start_with?('base64')
@@ -92,7 +69,7 @@ Extra fields are not restricted in any manner.
     return aargh('Field-names and content-files count is odd.', 1)
   end
 
-  doc = input.nil? ? {} : load_source(input)
+  doc = input.nil? ? {} : load_source_hash(input)
   return 2 if doc.nil?
 
   (0...ARGV.size).step(2) do |k|

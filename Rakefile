@@ -18,7 +18,7 @@ task install: [:gem] do
 end
 
 desc 'Test.'
-task test: %i[testnodes testedges testplace testprune testrender testtemplate] do
+task test: %i[testcommon testnodes testedges testplace testprune testrender testtemplate] do
 end
 
 desc 'Test nodes.'
@@ -49,4 +49,9 @@ end
 desc 'Test template.'
 task :testtemplate do
   sh './runtest.sh template'
+end
+
+desc 'Test common library.'
+task :testcommon do
+  sh './runtest.sh common'
 end

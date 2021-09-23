@@ -4,6 +4,7 @@
 # Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require '../lib/common.rb'
 require 'optparse'
 require 'yaml'
 require 'set'
@@ -12,14 +13,6 @@ require 'pathname'
 def info(msg, return_value = nil, loud = false)
   $stderr.puts(msg) unless $QUIET && !loud
   return_value
-end
-
-def load_source(input)
-  YAML.safe_load(input.nil? ? $stdin : File.read(input))
-rescue Errno::ENOENT
-  info("Could not load #{input || 'stdin'}")
-rescue StandardError => e
-  info("#{e}\nFailed to read #{input || 'stdin'}")
 end
 
 BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do

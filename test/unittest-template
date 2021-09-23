@@ -3,21 +3,10 @@
 # Copyright 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require './unittest.rb'
+
 $unit_test = 0
 load '../bin/diagrammatron-template'
-
-$context = ''
-def assert(value, expected, message)
-  condition = value == expected
-  $stdout.puts("#{condition ? 'ok' : 'fail'}: #{$context}: #{message}")
-  $stderr.puts("#{value.to_s} != #{expected.to_s}") unless condition
-  $unit_test = 1 unless condition
-  return condition
-end
-
-$context = 'aargh'
-assert(aargh("string").nil?, true, 'String, nil')
-assert(aargh([ 1, 2 ], 2), 2, 'Array, 2')
 
 $context = 'add_field'
 h = Hash.new('')

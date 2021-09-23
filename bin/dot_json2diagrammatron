@@ -4,16 +4,13 @@
 # Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require '../lib/common.rb'
 require 'optparse'
 require 'yaml'
 require 'json'
 require 'pathname'
 
-def aargh(message, return_value = nil)
-  $stderr.puts message
-  return_value
-end
-
+'''
 def load_source
   begin
     if $INPUT.nil?
@@ -29,6 +26,7 @@ def load_source
   end
   src
 end
+'''
 
 def convert(src)
   idx2label = {}

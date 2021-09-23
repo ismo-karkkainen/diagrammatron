@@ -6,14 +6,12 @@
 $unit_test = 0
 load '../bin/diagrammatron-nodes'
 
-$context = ''
 def assert(condition, message, extra = nil)
   $stdout.puts "#{condition ? 'ok' : 'fail'}: #{$context}: #{message}"
   $stderr.puts(extra) unless condition or extra.nil?
   $unit_test = 1 unless condition
   return condition
 end
-
 
 $context = 'shortest_paths'
 dists = shortest_paths({

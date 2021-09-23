@@ -4,15 +4,12 @@
 # Copyright © 2021 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
+require '../lib/common.rb'
 require 'optparse'
 require 'yaml'
 require 'set'
 require 'pathname'
 
-def aargh(message, return_value = nil)
-  $stderr.puts message
-  return_value
-end
 
 def vertical(work)
   work[:nodes].each_index do |k|
@@ -276,14 +273,6 @@ $algorithms = {
   'pathlength' => method(:pathlength2coordinates),
   'vertical' => method(:vertical)
 }
-
-def load_source(input)
-  YAML.safe_load(input.nil? ? $stdin : File.read(input))
-rescue Errno::ENOENT
-  aargh("Could not load #{input || 'stdin'}")
-rescue StandardError => e
-  aargh("#{e}\nFailed to read #{input || 'stdin'}")
-end
 
 def work_copy(src, quiet)
   work = { edges: [], nodes: [] }
