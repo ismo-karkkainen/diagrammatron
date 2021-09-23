@@ -157,17 +157,19 @@ The internal.yaml SVG 1.1 template is provided for convenience.
 
 # Requirements
 
-You need Ruby 2.5 or newer. Only standard library packages are used.
+You need Ruby 2.7 or newer. Only standard library packages are used.
 
 # Testing and installing
 
 To run tests, run:
 
     rake test
+    rake gem
+    rake install
 
-To install, by default to /usr/local/bin (export PREFIX=path to change), run:
+Alternatively, install the gem via:
 
-    sudo rake install
+    gem install diagrammatron
 
 Directory test/port contains scripts that are used to run tests on various
 operating systems. Each script is named after what uname returns on the OS
