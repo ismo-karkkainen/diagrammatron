@@ -1,0 +1,77 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Copyright © 2021 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require '../lib/common.rb'
+require 'optparse'
+require 'pathname'
+
+
+def template(name = nil)
+  n = File.expand_path(File.join(File.dirname(__FILE__), '..', 'template'))
+  return n if name.nil?
+  File.join(n, name)
+end
+
+def main
+  input = nil
+  output = nil
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 20
+    opts.banner = 'Usage: diagrammatron-get [options] name'
+    opts.separator ''
+    opts.separator 'Options:'
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
+      output = filename
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts %(#{opts}
+This is used to easily access template files included in the gem without need
+to clone the original repository.
+
+Without arguments, lists all templates, template root, and content files
+included in the gem.
+
+Given a name of a included file, saves it to --output.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  if ARGV.size.zero?
+    # List all files in templates directory.
+    Dir.entries(template).sort.each do |name|
+      next if name.start_with? '.'
+      $stdout.puts name
+    end
+  elsif ARGV.size > 1
+    return aargh('You can give only one content-file name.', 1)
+  end
+  # Read the file and save it.
+  begin
+    src = File.read(template(ARGV.first))
+  rescue Errno::ENOENT
+    return aargh("Could not load #{ARGV.first}", 2)
+  rescue StandardError => e
+    return aargh("#{e}\nFailed to read #{ARGV.first}", 3)
+  end
+  begin
+    if output.nil?
+      $stdout.puts src
+    else
+      fp = Pathname.new output
+      fp.open('w') do |f|
+        f.puts src
+      end
+    end
+  rescue StandardError => e
+    return aargh([ e, "Failed to write output: #{output || 'stdout'}" ], 4)
+  end
+  0
+end
+
+exit(main) if (defined? $unit_test).nil?

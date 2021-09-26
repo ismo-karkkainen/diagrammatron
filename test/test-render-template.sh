@@ -32,7 +32,7 @@ out $?
 rm -f t
 
 echo "####COMMAND External template"
-$D --template ../internal.yaml > x1 2> x2 <<EOF
+$D --template ../template/internal.yaml > x1 2> x2 <<EOF
 ---
 nodes:
 - label: oneL

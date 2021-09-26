@@ -23,6 +23,7 @@ Only the node names and edge end-point information is used.
 
 You should call the programs in the following order, as needed.
 
+* diagrammatron-get extracts template files from the gem.
 * dot_json2diagrammatron converts from dot_json to diagrammtron format.
 * diagrammatron-prune removes or retains nodes/edges from diagram.
 * diagrammatron-nodes places nodes inside sub-diagrams based on distances.
@@ -44,6 +45,21 @@ local values and providers as uninteresting and clean node labels via:
     diagrammatron-prune -i input.yaml ' provider' ' local.' 'meta.count-boundary' | sed -e 's/.root. //g' -e 's/ .expand.//g' > output.yaml
 
 All programs are designed to retain the source fields that they do not use.
+
+## diagrammatron-get
+
+Allows obtaining the templates stored in the gem. Removes the need to clone
+the source code repository.
+
+To get the internal.yaml used in the examples, run:
+
+    diagrammatron-get internal.yaml --output internal.yaml
+
+Running the program without arguments lists the available files.
+
+It may appear inconvenient to extract files before they can be used but at
+this point the assumption is that you should modify the template that produces
+the SVG output.
 
 ## dot_json2diagrammatron
 
@@ -148,10 +164,10 @@ The sizes mapping has to have a match for each style used with nodes. You can
 point to another style, or default, by specifying the style name. That allows
 you to use the same function multiple times.
 
-The file internal.yaml is the same as the internal template, created from
-internal_root.yaml and internal_template.yaml by running:
+The file internal.yaml used in examples is created from root.yaml and
+svg_1.1.erb by running (first extract the files using diagrammatron-get):
 
-    diagrammatron-template --out internal.yaml --root internal_root.yaml template internal_template.yaml
+    diagrammatron-template --out internal.yaml --root root.yaml template svg_1.1.erb
 
 The internal.yaml SVG 1.1 template is provided for convenience.
 

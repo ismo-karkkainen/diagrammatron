@@ -1,0 +1,56 @@
+####COMMAND List templates
+####CODE 3
+####OUT
+internal.yaml
+root.yaml
+svg_1.1.erb
+####ERR
+Is a directory @ io_fread - /Users/iak/Projects/datatools/diagrammatron/template
+Failed to read 
+####COMMAND Get existing file
+####CODE 0
+####OUT
+defaults:
+  edge_gap: 20
+  width_margin: 10
+  height_margin: 10
+  font:
+    font_size: 16
+  stroke_width: 2
+  width_key: w
+  height_key: h
+  size: default
+sizes:
+  default: |
+    $render.default_size(
+    $render.node.fetch('width_scale', $render.defaults.font.width),
+    $render.node.fetch('height_scale', $render.defaults.font.size),
+    $render.node.fetch('line_spacing', $render.defaults.font.line_spacing),
+    $render.node.fetch('width_margin', $render.defaults.width_margin),
+    $render.node.fetch('height_margin', $render.defaults.height_margin),
+    $render.node.fetch('edge_gap', $render.defaults.edge_gap))
+####ERR
+####COMMAND Get invalid file
+####CODE 2
+####OUT
+####ERR
+Could not load lmay.toor
+####COMMAND Save existing file
+####CODE 0
+####OUT
+####ERR
+####COMMAND Compare saved and existing
+####CODE 0
+####OUT
+####ERR
+####COMMAND Too many file names
+####CODE 1
+####OUT
+####ERR
+You can give only one content-file name.
+####COMMAND Invalid output file name
+####CODE 4
+####OUT
+####ERR
+No such file or directory @ rb_sysopen - ./in/valid
+Failed to write output: ./in/valid
