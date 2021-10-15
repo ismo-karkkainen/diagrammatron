@@ -2,14 +2,12 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'diagrammatron'
-  s.version     = '0.2.1'
-  s.date        = '2021-09-27'
+  s.version     = '0.2.2'
+  s.date        = '2021-10-15'
   s.summary     = 'Generates diagrams from input graph.'
   s.description = %q(
 Generates diagrams in SVG format from input material. Split into multiple
 programs that each perform one stage.
-
-Licensed under Universal Permissive License, see LICENSE.txt.
 )
   s.authors     = [ 'Ismo Kärkkäinen' ]
   s.email       = 'ismokarkkainen@icloud.com'
