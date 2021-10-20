@@ -48,6 +48,7 @@ Given a name of a included file, saves it to --output.
       next if name.start_with? '.'
       $stdout.puts name
     end
+    return 0
   elsif ARGV.size > 1
     return aargh('You can give only one content-file name.', 1)
   end

@@ -1,12 +1,10 @@
 ####COMMAND List templates
-####CODE 3
+####CODE 0
 ####OUT
 internal.yaml
 root.yaml
 svg_1.1.erb
 ####ERR
-Is a directory @ io_fread - /Users/iak/Projects/datatools/diagrammatron/template
-Failed to read 
 ####COMMAND Get existing file
 ####CODE 0
 ####OUT
