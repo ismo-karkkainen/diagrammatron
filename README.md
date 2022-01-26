@@ -195,6 +195,6 @@ Test build logs can be found in [ismo-kärkkäinen.fi/diagrammatron](https://xn-
 
 # License
 
-Copyright © 2021 Ismo Kärkkäinen
+Copyright © 2021, 2022 Ismo Kärkkäinen
 
 Licensed under Universal Permissive License. See LICENSE.txt.

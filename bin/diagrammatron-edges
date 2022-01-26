@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
@@ -109,7 +109,8 @@ def edge_subsets(work)
 end
 
 Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_index, :offset) do
-  def direction(s) # To decreasing or increasing coordinates.
+  # To decreasing or increasing coordinates.
+  def direction(s)
     return 0 if s.nil?
     if segment_index < s.segment_index
       (cc < s.range[1]) ? 1 : -1
@@ -119,7 +120,7 @@ Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_ind
   end
 
   def over_other_node(work, node_subset)
-    ck, rk = vertical ? [:xo, :yo] : [:yo, :xo]
+    ck, rk = vertical ? %i[xo yo] : %i[yo xo]
     i0, i1 = (range[0] < range[1]) ? [0, 1] : [1, 0]
     node_subset.each do |n|
       node = work[:nodes][n]
@@ -172,8 +173,7 @@ def segment(x0, y0, x1, y1)
   Segment.new(vert, cc, range, 0, [false, false], 0)
 end
 
-Connection = Struct.new(:node_index, :side_index) do
-end
+Connection = Struct.new(:node_index, :side_index)
 
 $paths = {}
 Path = Struct.new(:edge_index, :ends, :segments, :id, :crosses, :steps) do
@@ -439,7 +439,7 @@ def segment_order(a, b)
   a[0].edge_index <=> b[0].edge_index
 end
 
-GapState = Struct.new(:order, :count) do
+GapState = Struct.new(:order, :cross_count) do
   def fitness(segments, k)
     crossings = 0
     s = segments[k]
@@ -454,7 +454,7 @@ GapState = Struct.new(:order, :count) do
         crossings += 1
       end
     end
-    count + crossings
+    cross_count + crossings
   end
 end
 
@@ -463,13 +463,13 @@ def depth_first_search(segments, state, best)
     segments.each_index do |k|
       next if state.order.include? k
       c = state.fitness(segments, k)
-      next if (best.nil? ? c + 1 : best.count) <= c
+      next if (best.nil? ? c + 1 : best.cross_count) <= c
       state.order.push(k)
       best = depth_first_search(segments, GapState.new(state.order, c), best)
       state.order.pop
     end
   else
-    best = GapState.new(state.order.clone, state.count)
+    best = GapState.new(state.order.clone, state.cross_count)
   end
   best
 end
@@ -526,6 +526,7 @@ def group_stacked_offsets(group)
     group[k][0].offset = k + 1
   end
   return group.size
+%q(
   # This produces narrower gaps but they may be less clear.
   prev = group[0]
   prev[0].offset = 1
@@ -535,6 +536,7 @@ def group_stacked_offsets(group)
     prev = g
   end
   prev[0].offset
+)
 end
 
 def direct_range(paths)
@@ -549,7 +551,7 @@ def offsets(conn, paths, direct_ranges)
   dlow = [ here[0], opposite[0] ].max
   dhigh = [ here[2] - here[1], opposite[2] - opposite[1] ].max - 1
   d = dlow + here[1] - here[0] + dhigh + 1
-  low, high, size = here
+  low, high, _size = here
   offsets = []
   (0...low).each do |k|
     offsets.push(Rational((k + 1) * dlow, (d + 1) * low))
@@ -589,7 +591,7 @@ end
 def place_edges(work)
   subsets = edge_subsets(work)
   subsets.each_pair do |sid, subset|
-    full = Hash.new
+    full = {}
     subset.each do |edge_index|
       link = work[:edges][edge_index][:between]
       full[edge_index] = candidates(
@@ -826,20 +828,7 @@ Input YAML file is expected to be the output of diagrammatron-nodes.
 
   place_edges(work)
   prepare_output(doc, work)
-  begin
-    d = YAML.dump(doc, line_width: 1000000)
-    if output.nil?
-      $stdout.puts d
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts d
-      end
-    end
-  rescue StandardError => e
-    return aargh("#{e}\nFailed to write output: #{output || 'stdout'}", 4)
-  end
-  0
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
 end
 
 exit(main) if (defined? $unit_test).nil?

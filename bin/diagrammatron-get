@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'pathname'
 
@@ -16,7 +16,6 @@ def template(name = nil)
 end
 
 def main
-  input = nil
   output = nil
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -60,19 +59,7 @@ Given a name of a included file, saves it to --output.
   rescue StandardError => e
     return aargh("#{e}\nFailed to read #{ARGV.first}", 3)
   end
-  begin
-    if output.nil?
-      $stdout.puts src
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts src
-      end
-    end
-  rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{output || 'stdout'}" ], 4)
-  end
-  0
+  dump_result(output, src, 4)
 end
 
 exit(main) if (defined? $unit_test).nil?

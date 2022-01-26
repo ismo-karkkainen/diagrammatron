@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
@@ -420,20 +420,7 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
 
   algo.call(work)
   prepare_output(doc, work)
-  begin
-    d = YAML.dump(doc, line_width: 1000000)
-    if output.nil?
-      $stdout.puts d
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts d
-      end
-    end
-  rescue StandardError => e
-    return aargh("#{e}\nFailed to write output: #{output || 'stdout'}", 4)
-  end
-  0
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
 end
 
 exit(main) if (defined? $unit_test).nil?

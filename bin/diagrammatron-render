@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'erb'
@@ -153,7 +153,7 @@ def estimate_sizes(doc, template, ckd2count, defaults)
   doc['nodes'].each do |node|
     $render.node = node
     style = node.fetch('style', 'default')
-    code = sizes.fetch(style, defaults.fetch('size', 
+    code = sizes.fetch(style, defaults.fetch('size',
       %(raise NotImplementedError, "No size estimator for style: #{style}")))
     if sizes.key? code
       code = sizes.fetch(code)
@@ -216,11 +216,11 @@ def remap_coordinates(coords, cmax, c2min, defaults)
         coord.object[coord.key] = c + coord.fraction * cmax[coord.integer]
       else
         coord.object[coord.key] =
-          c + defaults.edge_gap * coord.fraction / c2min[coord.integer]
+          c + (defaults.edge_gap * coord.fraction) / c2min[coord.integer]
       end
     when 1
       gap = defaults.edge_gap
-      c += cmax[coord.integer] unless 1 == prev_dir
+      c += cmax[coord.integer] unless prev_dir == 1
       coord.object[coord.key] = c
       zero_after_decrease = false
     end
@@ -336,20 +336,7 @@ Output is the file produced by the erb-template.
   remap_coordinates(xcoords, xmax, x2min, defaults)
   remap_coordinates(ycoords, ymax, y2min, defaults)
 
-  out = apply(doc, template, defaults)
-  begin
-    if output.nil?
-      $stdout.puts out
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts out
-      end
-    end
-  rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{output || 'stdout'}" ], 5)
-  end
-  0
+  dump_result(output, apply(doc, template, defaults), 5)
 end
 
 exit(main) if (defined? $unit_test).nil?

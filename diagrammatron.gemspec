@@ -1,9 +1,10 @@
+# frozen_string_literal: true
+
 require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'diagrammatron'
-  s.version     = '0.2.2'
-  s.date        = '2021-10-15'
+  s.version     = '0.2.3'
   s.summary     = 'Generates diagrams from input graph.'
   s.description = %q(
 Generates diagrams in SVG format from input material. Split into multiple
@@ -22,4 +23,5 @@ programs that each perform one stage.
   s.executables << 'dot_json2diagrammatron'
   s.homepage    = 'https://xn--ismo-krkkinen-gfbd.fi/diagrammatron/index.html'
   s.license     = 'UPL-1.0'
+  s.required_ruby_version = '>= 2.7.0'
 end

@@ -1,17 +1,17 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
 require 'pathname'
 
-def info(msg, return_value = nil, loud = false)
-  $stderr.puts(msg) unless $QUIET && !loud
+def info(msg, return_value = nil)
+  $stderr.puts(msg) unless $QUIET
   return_value
 end
 
@@ -310,7 +310,7 @@ def pre_search_bounding_boxes(work)
 end
 
 def shift(work, sid, dx, dy)
-  [ :edges, :nodes ].each do |kind|
+  %i[edges nodes].each do |kind|
     work[kind].fetch(sid, []).each do |item|
       item.shift(dx, dy)
     end
@@ -402,16 +402,16 @@ do not overlap.
     begin
       whratio = Float($W2HRATIO)
       if whratio <= 0
-        return info("Ratio must be greater than zero: #{$W2HRATIO}", 1, true)
+        return aargh("Ratio must be greater than zero: #{$W2HRATIO}", 1)
       end
       $W2HRATIO = whratio
     rescue StandardError
-      return info("Ratio parameter not a number: #{$W2HRATIO}", 1, true)
+      return aargh("Ratio parameter not a number: #{$W2HRATIO}", 1)
     end
   end
 
   unless $algorithms.key? algo
-    return info("Unrecognized algorithm: #{algo}", 2, true)
+    return aargh("Unrecognized algorithm: #{algo}", 2)
   end
   algo = $algorithms[algo]
 
@@ -422,25 +422,12 @@ do not overlap.
     work = work_copy(doc)
     return 3 if work.nil?
   rescue StandardError
-    return info('Error processing input.', 3, true)
+    return aargh('Error processing input.', 3)
   end
 
   algo.call(work)
   prepare_output(doc, work)
-  begin
-    d = YAML.dump(doc, line_width: 1000000)
-    if output.nil?
-      $stdout.puts d
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts d
-      end
-    end
-  rescue StandardError => e
-    return info("#{e}\nFailed to write output: #{output || 'stdout'}", 4, true)
-  end
-  0
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
 end
 
 exit(main) if (defined? $unit_test).nil?

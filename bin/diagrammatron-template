@@ -1,10 +1,10 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
@@ -21,7 +21,7 @@ def add_field(doc, field_name, content)
 end
 
 def missing(doc)
-  [ 'defaults', 'sizes', 'template' ].each do |key|
+  %w[defaults sizes template].each do |key|
     next if doc.key? key
     next if doc.key? "base64#{key}"
     return aargh("#{key} is missing", 4)
@@ -88,20 +88,7 @@ Extra fields are not restricted in any manner.
   m = missing(doc)
   return m unless m.nil?
 
-  begin
-    d = YAML.dump(doc, line_width: 1000000)
-    if output.nil?
-      $stdout.puts d
-    else
-      fp = Pathname.new output
-      fp.open('w') do |f|
-        f.puts d
-      end
-    end
-  rescue StandardError => e
-    return aargh([ e, "Failed to write output: #{output || 'stdout'}" ], 5)
-  end
-  0
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 5)
 end
 
 exit(main) if (defined? $unit_test).nil?

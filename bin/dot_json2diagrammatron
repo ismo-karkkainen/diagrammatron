@@ -1,32 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
-require_relative '../lib/common.rb'
+require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'json'
 require 'pathname'
 
-'''
-def load_source
-  begin
-    if $INPUT.nil?
-      src = $stdin.read
-    else
-      src = File.read($INPUT)
-    end
-    src = JSON.parse(src)
-  rescue Errno::ENOENT
-    return aargh("Could not load #{$INPUT || 'stdin'}")
-  rescue StandardError => e
-    return aargh("#{e}\nFailed to read #{$INPUT || 'stdin'}")
-  end
-  src
-end
-'''
 
 def convert(src)
   idx2label = {}

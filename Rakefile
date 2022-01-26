@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'rubocop/rake_task'
+
 task default: [ :install ]
 
 desc 'Clean.'
@@ -59,4 +61,9 @@ end
 desc 'Test common library.'
 task :testcommon do
   sh './runtest.sh common'
+end
+
+desc 'Lint using Rubocop'
+RuboCop::RakeTask.new(:lint) do |t|
+  t.patterns = [ 'bin', 'lib', 'diagrammatron.gemspec' ]
 end

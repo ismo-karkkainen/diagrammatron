@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021, 2022 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 def aargh(message, return_value = nil)
@@ -23,4 +23,18 @@ def load_source_hash(input)
     return aargh('Input is not a mapping.') unless src.is_a? Hash
   end
   src
+end
+
+def dump_result(output, doc, error_return)
+  if output.nil?
+    $stdout.puts doc
+  else
+    fp = Pathname.new output
+    fp.open('w') do |f|
+      f.puts doc
+    end
+  end
+  0
+rescue StandardError => e
+  aargh([ e, "Failed to write output: #{output || 'stdout'}" ], error_return)
 end
