@@ -26,14 +26,13 @@ $render.doc.fetch('nodes', []).each do |node|
   y += hm + ma # Baseline for first line.
   url = node.fetch('url', nil)
   url.encode!(:xml => :attr) unless url.nil?
-  lines = node.fetch('label', '').split("\n")
   y0 = y
-  lines.each do |label|
-    label.encode!(:xml => :text)
+  node['label'].each do |line|
+    line.encode!(:xml => :text)
     if url.nil?
-      out.push(%(<text #{textstyle} x="#{x}" y="#{y0}">#{label}</text>))
+      out.push(%(<text #{textstyle} x="#{x}" y="#{y0}">#{line}</text>))
     else
-      out.push(%(<a xlink:href=#{url} target="_parent"><text #{linkstyle} x="#{x}" y="#{y0}">#{label}</text></a>))
+      out.push(%(<a xlink:href=#{url} target="_parent"><text #{linkstyle} x="#{x}" y="#{y0}">#{line}</text></a>))
     end
     y0 += lh # Shift baseline by full line + spacing height.
   end

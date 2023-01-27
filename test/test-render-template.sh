@@ -69,6 +69,7 @@ nodes:
   xo: 2
   yo: 0
 - label: three-line
+  text: Three-line
   sid: 2
   xo: 4
   yo: 0

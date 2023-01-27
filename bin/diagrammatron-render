@@ -135,7 +135,7 @@ class SizeEstimation
 
   def default_size(width_scale = nil, height_scale = nil, line_spacing = nil,
       width_margin = nil, height_margin = nil, edge_gap = nil)
-    lines = @node.fetch('label', '').split("\n")
+    lines = @node['label']
     w = 2 * (width_margin || @defaults.width_margin) +
       (width_scale || @default.font.width) * (lines.map &(:size)).max
     @node[@defaults.width_key] = [ w, max_edges('xo', edge_gap) ].max
@@ -151,6 +151,9 @@ def estimate_sizes(doc, template, ckd2count, defaults)
   sizes = template.fetch('sizes', {})
   defaults = template.fetch('defaults', {})
   doc['nodes'].each do |node|
+    label = node.fetch('label', 'unnamed')
+    # Substitute "text" as label if present, split to lines.
+    node['label'] = node.fetch('text', node.fetch('label', '')).split("\n")
     $render.node = node
     style = node.fetch('style', 'default')
     code = sizes.fetch(style, defaults.fetch('size',
@@ -162,7 +165,7 @@ def estimate_sizes(doc, template, ckd2count, defaults)
     begin
       eval(code, $render.get_binding)
     rescue StandardError => e
-      return aargh("Size estimate style #{style} node #{node.fetch('label', 'unnamed')} error #{e}", false)
+      return aargh("Size estimate style #{style} node #{label} error #{e}", false)
     end
   end
   $render = nil

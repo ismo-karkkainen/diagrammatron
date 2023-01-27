@@ -19,6 +19,19 @@ If you have a GraphViz dot file, you can convert it using GraphViz dot tool:
 
 Only the node names and edge end-point information is used.
 
+# Diagram file contents
+
+In short the diagram file is a YAML file that contains:
+
+```yaml
+---
+nodes:
+- label: identifier
+- label: identifier2
+edges:
+- between: [ identifier, identifier2 ]
+```
+
 # Programs
 
 You should call the programs in the following order, as needed.
@@ -78,9 +91,10 @@ that remain for cleaner output.
 ## diagrammatron-nodes
 
 Finds connected sub-diagrams and assigns nodes locations to "xo" and "yo"
-fields. A couple simple algorithms are available. Coordinates indicate the
-ordering of nodes and not where they should actually be located. Disjoint
-sub-diagrams will be placed on top of each other.
+fields and disjoint sub-graph identifier as "sid". Couple simple algorithms
+are available. Coordinates indicate the ordering of nodes and not where they
+should actually be located. Disjoint sub-diagrams will be placed on top of
+each other.
 
 ## diagrammatron-edges
 
@@ -91,10 +105,12 @@ vertical segments with 90-degree angles.
 Currently uses very slow depth-first search to determine the order of edge
 segments with regard to each other when they are in same gap between nodes.
 
+Fields "path" and "sid" are added to each edge.
+
 ## diagrammatron-place
 
 Places disjoint sub-diagrams in relation to each other so that they do not
-overlap. The bounding rectangle side lengths are monimized. The width to height
+overlap. The bounding rectangle side lengths are minimized. The width to height
 ratio of the nodes can be taken into account using --ratio parameter. All
 nodes are considered point-like at this stage. Not using ratio will probably
 result in elongated output from diagrammatron-render.
@@ -104,11 +120,14 @@ result in elongated output from diagrammatron-render.
 Takes a template and uses it to produce an image file. The file is in YAML
 format. The internal.yaml provided in this repository produces SVG 1.1 file.
 
-Nodes are expected to have a field names "style" that defaults to "default"
+If a node has field named "text", it replaces "label" and is split to multiple
+strings on newline character.
+
+Nodes are expected to have a field named "style" that defaults to "default"
 if missing. The style is used to find a function that assigns width and height
 to the node before final sizes are assigned. The algorithm at this point relies
 on each column having nodes of equal width and each row having nodes of equal
-height. Consequently only rectangular nodes are possible and if multiple
+height. Consequently only rectangular nodes are possible, and multiple
 external styles either must adapt to the size limitation, in the extreme case
 making all nodes have the same dimensions, or the edges will not reach the node
 side unless you perform extra processing in the template.
@@ -118,7 +137,8 @@ it may also have whatever the templates need.
 
 A "sizes" field should be a mapping from style name to a function that can
 determine the size of the node. A "default" value that is used for all missing
-styles must be present. The values are erb-templates.
+styles must be present. The values are passed through eval with binding to
+SizeEstimation instance, see source code.
 
 A "template" field is an erb-string that is used for final rendering of the
 output.
