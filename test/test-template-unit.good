@@ -6,13 +6,13 @@ ok: add_field: Content encoded
 ok: add_field: Field name present as is
 ok: add_field: Content retained as is
 ok: missing: All required missing
-ok: missing: defaults not missing
 ok: missing: template missing
 ok: missing: template missing with added
+ok: missing: styles missing
 ok: missing: Nothing missing
 ok: missing: Nothing missing with extra field
 ####ERR
-defaults is missing
-sizes is missing
 template is missing
 template is missing
+template is missing
+styles is missing

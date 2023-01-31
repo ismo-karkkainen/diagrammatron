@@ -4,6 +4,7 @@ set -u
 export D=$1
 R=$2
 export X=$(ruby --version | cut -d ' ' -f 2)
+gem install rubocop --no-document
 
 cd $R
 (

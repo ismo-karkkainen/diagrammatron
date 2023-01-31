@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
@@ -76,52 +76,68 @@ def separate_coordinates(doc)
   [ xcoords, ycoords, ckd2count ]
 end
 
-class FontInfo
-  attr_reader :descender, :max_ascend, :ascender, :cap_height, :line_spacing, :width, :size
-
-  def initialize(template)
-    font = template.fetch('defaults', {}).fetch('font', { 'font_size' => 16 })
-    @cap_height = font.fetch('cap_height', 0.8 * font.fetch('font_size', 16))
-    @ascender = font.fetch('ascender', @cap_height)
-    @max_ascend = [ @cap_height, @ascender ].max
-    @descender = font.fetch('descender', 0.25 * @max_ascend)
-    @size = font.fetch('font_size', @max_ascend + @descender)
-    @line_spacing = font.fetch('line_spacing', 0.2 * @max_ascend)
-    @width = font.fetch('width', 0.5 * @size)
+class Styles
+  def base_styles(m, styles, group)
+    d = styles.dig(group, 'default')
+    if d.nil?
+      d = m.fetch('default', {}) if d.nil?
+    else
+      m['default'] = m.fetch('default', {}).merge(d)
+    end
+    styles.fetch(group, {}).each_pair do |name, values|
+      s = d.clone
+      s.merge!(values) unless name == 'default'
+      m[name] = m.fetch(name, {}).merge(s)
+    end
+    m
   end
-end
 
-class Defaults
-  attr_reader :width_key, :height_key, :width_margin, :height_margin, :edge_gap
-  attr_reader :font
+  def initialize(template_styles, diagram_styles)
+    @n = base_styles(base_styles({}, template_styles, 'node'), diagram_styles, 'node')
+    @e = base_styles(base_styles({}, template_styles, 'edge'), diagram_styles, 'edge')
+    @d = base_styles(base_styles({}, template_styles, 'diagram'), diagram_styles, 'diagram')
+  end
 
-  def initialize(template)
-    defaults = template.fetch('defaults', {})
-    @width_key = defaults.fetch('width_key', 'w')
-    @height_key = defaults.fetch('height_key', 'h')
-    @width_margin = defaults.fetch('width_margin', 10)
-    @height_margin = defaults.fetch('height_margin', 10)
-    @edge_gap = defaults.fetch('edge_gap', 20)
-    @font = FontInfo.new(template)
+  def fill(mapping, type_name, item)
+    styles = item.fetch('style', [ 'default' ])
+    styles = [ styles ] unless styles.is_a?(Array)
+    s = {}
+    found = false
+    styles.each do |name|
+      ns = mapping.fetch(name, nil)
+      next if ns.nil?
+      found = true
+      s.merge! ns
+    end
+    s.merge!(mapping['default']) unless found # Merge default at least.
+    # Keep values specified explicitly.
+    item.merge!(s) { |key, existing, from_template| existing || from_template }
+  end
+
+  def apply_node_styles(node)
+    fill(@n, 'node', node)
+  end
+
+  def apply_edge_styles(edge)
+    fill(@e, 'edge', edge)
+  end
+
+  def apply_diagram_styles(diagram)
+    fill(@d, 'diagram', diagram)
   end
 end
 
 class SizeEstimation
-  attr_accessor :node, :template, :ckd2count, :defaults
+  attr_accessor :node, :ckd2count, :doc
 
-  def initialize(template, ckd2count, defaults)
+  def initialize(ckd2count, doc)
     @node = nil
-    @template = template
     @ckd2count = ckd2count
-    @defaults = defaults
+    @doc = doc
   end
 
-  def get_binding
+  def exposed_binding
     binding
-  end
-
-  def get_default(key, default_value = nil)
-    @template.fetch('defaults', {}).fetch(key, default_value)
   end
 
   def max_edges(key, edge_gap)
@@ -130,40 +146,35 @@ class SizeEstimation
     c[3] = 1
     count = [ count, @ckd2count[c] ].max
     return 0 if count < 2
-    (count - 1) * (edge_gap || @defaults.edge_gap)
+    (count - 1) * edge_gap
   end
 
-  def default_size(width_scale = nil, height_scale = nil, line_spacing = nil,
-      width_margin = nil, height_margin = nil, edge_gap = nil)
-    lines = @node['label']
-    w = 2 * (width_margin || @defaults.width_margin) +
-      (width_scale || @default.font.width) * (lines.map &(:size)).max
-    @node[@defaults.width_key] = [ w, max_edges('xo', edge_gap) ].max
-    h = 2 * (height_margin || @defaults.height_margin) +
-      (height_scale || @defaults.font.size) * lines.size +
-      (line_spacing || @defaults.font.line_spacing) * (lines.size - 1)
-    @node[@defaults.height_key] = [ h, max_edges('yo', edge_gap) ].max
+  # font_size is the actual size.
+  # font_width, font_height, font_line_spacing are [0, 1] size scaling factors.
+  # width_margin, height_margin are in same units as fonti, space inside node.
+  # edge_gap is minimum space between edges at any node side.
+  def default_size(font_size, font_width, font_height, font_line_spacing,
+      width_margin, height_margin, edge_gap)
+    lines = @node['text']
+    w = 2 * width_margin + font_width * font_size * (lines.map &(:size)).max
+    @node['w'] = [ w, max_edges('xo', edge_gap) ].max
+    h = 2 * height_margin + font_height * font_size * lines.size +
+      font_line_spacing * font_size * (lines.size - 1)
+    @node['h'] = [ h, max_edges('yo', edge_gap) ].max
   end
 end
 
-def estimate_sizes(doc, template, ckd2count, defaults)
-  $render = SizeEstimation.new(template, ckd2count, defaults)
-  sizes = template.fetch('sizes', {})
-  defaults = template.fetch('defaults', {})
+def estimate_sizes(doc, ckd2count)
+  $render = SizeEstimation.new(ckd2count, doc)
   doc['nodes'].each do |node|
-    label = node.fetch('label', 'unnamed')
-    # Substitute "text" as label if present, split to lines.
-    node['label'] = node.fetch('text', node.fetch('label', '')).split("\n")
     $render.node = node
+    label = node.fetch('label', 'unnamed')
     style = node.fetch('style', 'default')
-    code = sizes.fetch(style, defaults.fetch('size',
-      %(raise NotImplementedError, "No size estimator for style: #{style}")))
-    if sizes.key? code
-      code = sizes.fetch(code)
-    end
+    code = node.fetch('size_estimator',
+      %(raise NotImplementedError, "No size estimator for style: #{style}"))
     code = code.join("\n") if code.is_a? Array
     begin
-      eval(code, $render.get_binding)
+      eval(code, $render.exposed_binding)
     rescue StandardError => e
       return aargh("Size estimate style #{style} node #{label} error #{e}", false)
     end
@@ -172,20 +183,20 @@ def estimate_sizes(doc, template, ckd2count, defaults)
   true
 end
 
-def maxima(doc, defaults)
+def maxima(doc)
   xmax = Hash.new(0)
   ymax = Hash.new(0)
   doc.fetch('nodes', []).each do |node|
-    xmax[node['xo']] = [ node[defaults.width_key], xmax[node['xo']] ].max
-    ymax[node['yo']] = [ node[defaults.height_key], ymax[node['yo']] ].max
+    xmax[node['xo']] = [ node['w'], xmax[node['xo']] ].max
+    ymax[node['yo']] = [ node['h'], ymax[node['yo']] ].max
   end
   [ xmax, ymax ]
 end
 
-def apply_maxima(doc, xmax, ymax, defaults)
+def apply_maxima(doc, xmax, ymax)
   doc.fetch('nodes', []).each do |node|
-    node[defaults.width_key] = xmax[node['xo']]
-    node[defaults.height_key] = ymax[node['yo']]
+    node['w'] = xmax[node['xo']]
+    node['h'] = ymax[node['yo']]
   end
 end
 
@@ -200,8 +211,8 @@ def parallel_edge_step_minima(coords)
   c2m
 end
 
-def remap_coordinates(coords, cmax, c2min, defaults)
-  c = defaults.edge_gap
+def remap_coordinates(coords, cmax, c2min, edge_gap)
+  c = edge_gap
   gap = 0 # How much space all edge segments need.
   zero_after_decrease = false
   prev_dir = -2
@@ -210,19 +221,19 @@ def remap_coordinates(coords, cmax, c2min, defaults)
     case coord.direction
     when -1
       c += gap if -1 < prev_dir
-      gap = defaults.edge_gap
+      gap = edge_gap
       coord.object[coord.key] = c
     when 0
-      gap = defaults.edge_gap / c2min[coord.integer]
+      gap = edge_gap / c2min[coord.integer]
       if zero_after_decrease
         # Edge segment is at same range as nodes.
         coord.object[coord.key] = c + coord.fraction * cmax[coord.integer]
       else
         coord.object[coord.key] =
-          c + (defaults.edge_gap * coord.fraction) / c2min[coord.integer]
+          c + (edge_gap * coord.fraction) / c2min[coord.integer]
       end
     when 1
-      gap = defaults.edge_gap
+      gap = edge_gap
       c += cmax[coord.integer] unless prev_dir == 1
       coord.object[coord.key] = c
       zero_after_decrease = false
@@ -232,28 +243,23 @@ def remap_coordinates(coords, cmax, c2min, defaults)
 end
 
 class Render
-  attr_accessor :doc, :template, :defaults
+  attr_accessor :doc, :template
 
-  def initialize(doc, template, defaults)
+  def initialize(doc, template)
     @doc = doc
     @template = template
-    @defaults = defaults
   end
 
-  def get_binding
+  def exposed_binding
     binding
-  end
-
-  def get_default(key, default_value = nil)
-    @template.fetch('defaults', {}).fetch(key, default_value)
   end
 
   def dimensions
     w = 0
     h = 0
     @doc.fetch('nodes', []).each do |node|
-      w = [ w, node['xo'] + node[@defaults.width_key] ].max
-      h = [ h, node['yo'] + node[@defaults.height_key] ].max
+      w = [ w, node['xo'] + node['w'] ].max
+      h = [ h, node['yo'] + node['h'] ].max
     end
     @doc.fetch('edges', []).each do |edge|
       path = edge.fetch('path', nil)
@@ -267,9 +273,9 @@ class Render
   end
 end
 
-def apply(doc, template, defaults)
-  $render = Render.new(doc, template, defaults)
-  out = ERB.new(template.fetch('template', '')).result($render.get_binding)
+def apply(doc, template)
+  $render = Render.new(doc, template)
+  out = ERB.new(template.fetch('template', '')).result($render.exposed_binding)
   $render = nil
   out
 end
@@ -278,6 +284,7 @@ def main
   template = nil
   input = nil
   output = nil
+  styles = nil
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
@@ -317,10 +324,18 @@ Output is the file produced by the erb-template.
       return aargh("Key #{key} base-64 decoding failed to key #{nk}", 2)
     end
   end
-  defaults = Defaults.new(template)
 
   doc = load_source(input)
   return 2 if doc.nil?
+
+  styles = Styles.new(template.fetch('styles', {}), doc.fetch('styles', {}))
+  doc.fetch('nodes', []).each do |node|
+    styles.apply_node_styles(node)
+    node['text'] = node.fetch('text', node.fetch('label', '')).split("\n")
+  end
+  doc.fetch('edges', []).each { |edge| styles.apply_edge_styles(edge) }
+  doc['diagram'] = {} unless doc.key? 'diagram'
+  styles.apply_diagram_styles(doc['diagram'])
 
   begin
     xcoords, ycoords, ckd2count = separate_coordinates(doc)
@@ -328,18 +343,18 @@ Output is the file produced by the erb-template.
     return aargh('Error processing input.', 3)
   end
 
-  return 4 unless estimate_sizes(doc, template, ckd2count, defaults)
+  return 4 unless estimate_sizes(doc, ckd2count)
 
   # Make all rows the same height and all columns the same width.
-  xmax, ymax = maxima(doc, defaults)
-  apply_maxima(doc, xmax, ymax, defaults)
+  xmax, ymax = maxima(doc)
+  apply_maxima(doc, xmax, ymax)
 
   x2min = parallel_edge_step_minima(xcoords)
   y2min = parallel_edge_step_minima(ycoords)
-  remap_coordinates(xcoords, xmax, x2min, defaults)
-  remap_coordinates(ycoords, ymax, y2min, defaults)
+  remap_coordinates(xcoords, xmax, x2min, doc.dig('diagram', 'edge_gap'))
+  remap_coordinates(ycoords, ymax, y2min, doc.dig('diagram', 'edge_gap'))
 
-  dump_result(output, apply(doc, template, defaults), 5)
+  dump_result(output, apply(doc, template), 5)
 end
 
 exit(main) if (defined? $unit_test).nil?

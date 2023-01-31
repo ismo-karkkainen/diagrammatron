@@ -393,39 +393,6 @@ sg = segment(4, 0, 5, 0)
 assert(segment_order([ sa, 3, sa, [0], [0] ], [ sg, 3, sg, [0], [0] ]),
   1, 'Higher end first in group 3')
 
-$context = 'GapState fitness'
-sa = segment(1, 0, 3, 0)
-sb = segment(2, 0, 4, 0)
-s = [
-  [ sa, 1, sa ],
-  [ sb, 1, sb ]
-]
-gs = GapState.new([0], 0)
-assert(gs.fitness(s, 1), 0, 'No crossing')
-s[1][1] = 2
-assert(gs.fitness(s, 1), 1, '1 crossing')
-s[0][1] = 2
-assert(gs.fitness(s, 1), 2, '2 crossings')
-s[1][1] = 1
-assert(gs.fitness(s, 1), 1, '1 crossing')
-
-$context = 'depth_first_search'
-sa = segment(1, 0, 4, 0)
-sb = segment(2, 0, 5, 0)
-sc = segment(3, 0, 6, 0)
-s = [
-  [ sa, 2, sa ],
-  [ sb, 2, sb ],
-  [ sc, 2, sc ]
-]
-assert(zigzag_order(s), s.reverse, 'Order gets reversed')
-s = [
-  [ sa, 1, sa ],
-  [ sc, 1, sc ],
-  [ sb, 1, sb ]
-]
-assert(zigzag_order(s), [ s[0], s[2], s[1] ], 'Two last swapped')
-
 $context = 'direct_range'
 p1 = Path.new(0, [0, 1]).push(segment(1, 0, 1, 2))
 p2 = Path.new(0, [0, 1]).push(segment(1, 0, 3, 0)).push(segment(3, 0, 3, 2))

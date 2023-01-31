@@ -7,7 +7,7 @@ Input is not a mapping.
 ####CODE 4
 ####OUT
 ####ERR
-sizes is missing
+template is missing
 ####COMMAND Valid root but unpaired parameters
 ####CODE 1
 ####OUT
@@ -17,26 +17,52 @@ Field-names and content-files count is odd.
 ####CODE 0
 ####OUT
 ---
-defaults:
-  key: value
+styles:
+  diagram:
+    default:
+      key: value
+  node:
+    default:
+      key: value
+  edge:
+    default:
+      key: value
 base64sizes: MAo=
 base64template: MQo=
 ####ERR
-####COMMAND Valid encoded root and fields
+####COMMAND Valid root and encoded fields
 ####CODE 0
 ####OUT
 ---
-base64defaults: content
+styles:
+  diagram:
+    default:
+      key: value
+  node:
+    default:
+      key: value
+  edge:
+    default:
+      key: value
 base64sizes: MAo=
 base64template: '1
 
 '
 ####ERR
-####COMMAND Valid encoded root and fields with extra
+####COMMAND Valid root and encoded fields with extra
 ####CODE 0
 ####OUT
 ---
-base64defaults: content
+styles:
+  diagram:
+    default:
+      key: value
+  node:
+    default:
+      key: value
+  edge:
+    default:
+      key: value
 base64sizes: MAo=
 base64template: '1
 

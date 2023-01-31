@@ -4,7 +4,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'diagrammatron'
-  s.version     = '0.3.0'
+  s.version     = '0.4.2'
   s.summary     = 'Generates diagrams from input graph.'
   s.description = %q(
 Generates diagrams in SVG format from input material. Split into multiple

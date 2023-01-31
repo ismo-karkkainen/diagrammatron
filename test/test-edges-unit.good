@@ -137,12 +137,6 @@ ok: segment_order: Higher minimum first in group 2
 ok: segment_order: Smaller edge index first, group 2
 ok: segment_order: Longer first in group 3
 ok: segment_order: Higher end first in group 3
-ok: GapState fitness: No crossing
-ok: GapState fitness: 1 crossing
-ok: GapState fitness: 2 crossings
-ok: GapState fitness: 1 crossing
-ok: depth_first_search: Order gets reversed
-ok: depth_first_search: Two last swapped
 ok: direct_range: Singleton
 ok: direct_range: First
 ok: direct_range: Second

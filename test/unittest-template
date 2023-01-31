@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright 2021 Ismo Kärkkäinen
+# Copyright 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require './unittest.rb'
@@ -21,13 +21,16 @@ assert(h['base64name'], 'content', 'Content retained as is')
 $context = 'missing'
 h = Hash.new
 assert(missing(h), 4, 'All required missing')
-h['base64defaults'] = 0
-assert(missing(h), 4, 'defaults not missing')
-h['base64sizes'] = 0
 assert(missing(h), 4, 'template missing')
 h['base64added'] = 0
 assert(missing(h), 4, 'template missing with added')
 h['base64template'] = 0
+assert(missing(h), 4, 'styles missing')
+h['styles'] = {
+  'diagram' => { 'default' => true },
+  'node' => { 'default' => true },
+  'edge' => { 'default' => true }
+}
 assert(missing(h).nil?, true, 'Nothing missing')
 h['base64extra'] = 0
 assert(missing(h).nil?, true, 'Nothing missing with extra field')

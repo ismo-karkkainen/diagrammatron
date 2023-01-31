@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
@@ -21,10 +21,14 @@ def add_field(doc, field_name, content)
 end
 
 def missing(doc)
-  %w[defaults sizes template].each do |key|
+  %w[template styles].each do |key|
     next if doc.key? key
     next if doc.key? "base64#{key}"
     return aargh("#{key} is missing", 4)
+  end
+  %w[node edge diagram].each do |key|
+    v = doc.dig('styles', key, 'default')
+    return aargh("styles #{key} default is missing", 4) if v.nil?
   end
   nil
 end
@@ -50,15 +54,24 @@ def main
 Pairs all parameter field-names with content-files contents, starting with
 either given root YAML file or with an empty root.
 
-Any field name either in root document or in parameters is trusted to be
-base-64 encoded without further checking.
-
 Outputs a YAML-file that case be used with diagrammatron-render as a template.
 All fields are base64-encoded for safety. diagrammatron-render will decode
 them and rename the fields by removing the base64 prefix.
 
-Presence of "defaults", "sizes", and "template" fields is checked for.
+Root document is expected to have at least the following:
+styles:
+  node:
+    defaults: {}
+  edge:
+    defaults: {}
+  diagram:
+    defaults: {}
+
+Presence of "template" field is checked for.
 Extra fields are not restricted in any manner.
+
+Any field name in parameters starting with "base64" is trusted to be base-64
+encoded without further checking.
 )
       exit 0
     end

@@ -1,19 +1,30 @@
-defaults:
-  edge_gap: 20
-  width_margin: 10
-  height_margin: 10
-  font:
-    font_size: 16
-  stroke_width: 2
-  width_key: w
-  height_key: h
-  size: default
-sizes:
-  default: |
-    $render.default_size(
-    $render.node.fetch('width_scale', $render.defaults.font.width),
-    $render.node.fetch('height_scale', $render.defaults.font.size),
-    $render.node.fetch('line_spacing', $render.defaults.font.line_spacing),
-    $render.node.fetch('width_margin', $render.defaults.width_margin),
-    $render.node.fetch('height_margin', $render.defaults.height_margin),
-    $render.node.fetch('edge_gap', $render.defaults.edge_gap))
+styles:
+  diagram:
+    default:
+      edge_gap: 20
+      width_margin: 10
+      height_margin: 10
+  node:
+    default:
+      width_margin: 10
+      height_margin: 10
+      font_size: 16
+      font_ascend: 0.8
+      font_line_spacing: 0.2
+      font_height: 1
+      font_width: 0.5
+      font_fill: "#000000"
+      url_fill: "#000000"
+      fill: "#ffffff"
+      stroke: "#000000"
+      stroke_width: 2
+      size_estimator: |
+        $render.default_size($render.node['font_size'],
+        $render.node['font_width'], $render.node['font_height'],
+        $render.node['font_line_spacing'],
+        $render.node['width_margin'], $render.node['height_margin'],
+        $render.doc['diagram']['edge_gap'])
+  edge:
+    default:
+      stroke_width: 2
+      stroke: "#000000"

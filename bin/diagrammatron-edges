@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
@@ -68,7 +68,7 @@ def work_copy(src, quiet)
       next
     end
     label = node['label']
-    if label2idx.key?(label) && edge_nodes.key?(label)
+    if label2idx.key?(label) && edge_nodes.member?(label)
       aargh "Edge-referred label used twice: #{label}"
       errors = true
     end
@@ -424,68 +424,30 @@ def segment_order(a, b)
     return d unless d.zero?
     d = a[2].range.min <=> b[2].range.min
     return d unless d.zero?
-  when 1 # From top left, down, bottom right: -|_
-    d = a[2].range.min <=> b[2].range.min # Guesstimate for DFS.
+  when 1 # Top left, vertical, bottom right: -|_
+    d = a[2].range.min <=> b[2].range.min # Ascend on minimum.
+    return d unless d.zero?
+    d = a[2].length <=> b[2].length # Ascend on length.
     return d unless d.zero?
   when 2 # From top right, down, bottom left: _|-
-    d = a[2].range.min <=> b[2].range.min # Guesstimate for DFS.
+    d = a[2].range.max <=> b[2].range.max # Descend on maximum.
     return -d unless d.zero?
+    d = a[2].length <=> b[2].length # Ascend on length.
+    return d unless d.zero?
   when 3 # Descending on length, range maximum. |=
-    d = b[2].length <=> a[2].length
-    return d unless d.zero?
-    d = b[2].range.max <=> a[2].range.max
-    return d unless d.zero?
+    d = a[2].length <=> b[2].length
+    return -d unless d.zero?
+    d = a[2].range.max <=> b[2].range.max
+    return -d unless d.zero?
   end
   a[0].edge_index <=> b[0].edge_index
 end
 
-GapState = Struct.new(:order, :cross_count) do
-  def fitness(segments, k)
-    crossings = 0
-    s = segments[k]
-    prev = (s[1] == 1) ? s[2].range.max : s[2].range.min
-    order.each do |n|
-      placed = segments[n]
-      if placed[2].range.min <= prev && prev <= placed[2].range.max
-        crossings += 1
-      end
-      v = (placed[1] == 1) ? placed[2].range.min : placed[2].range.max
-      if s[2].range.min <= v && v <= s[2].range.max
-        crossings += 1
-      end
-    end
-    cross_count + crossings
-  end
-end
-
-def depth_first_search(segments, state, best)
-  if state.order.size < segments.size
-    segments.each_index do |k|
-      next if state.order.include? k
-      c = state.fitness(segments, k)
-      next if (best.nil? ? c + 1 : best.cross_count) <= c
-      state.order.push(k)
-      best = depth_first_search(segments, GapState.new(state.order, c), best)
-      state.order.pop
-    end
-  else
-    best = GapState.new(state.order.clone, state.cross_count)
-  end
-  best
-end
-
-def zigzag_order(segments)
-  return segments if segments.size < 2
-  # DFS. Fitness is how many end segments cross the placed segments.
-  # Sort so that those that cross least when at start are first and vice versa.
-  best = nil
-  segments.each_index do |k|
-    best = depth_first_search(segments, GapState.new([ k ], 0), best)
-  end
+def zigzag_order(from_right_up_to_left, from_left_up_to_right)
+  # Eventually interleave the two sets, if it makes sense.
   out = []
-  best.order.each do |k|
-    out.push segments[k]
-  end
+  from_right_up_to_left.each { |x| out.push x }
+  from_left_up_to_right.each { |x| out.push x }
   out
 end
 
@@ -653,7 +615,7 @@ def place_edges(work)
     chosen.each_value do |p|
       (1...(p.segments.size - 1)).each do |k|
         # Middle segments always have surrounding segments.
-        s, before, after, sb, sa = p.segment_directions(k)
+        s, below, above, sb, sa = p.segment_directions(k)
         so = s.clone # More accurate info on actual range with end offsets.
         if so.range[0] < so.range[1]
           so.range[0] += sb.offset unless sb.offset.nil?
@@ -662,17 +624,24 @@ def place_edges(work)
           so.range[0] += sb.offset.nil? ? 0.9999 : sb.offset
           so.range[1] += sa.offset unless sa.offset.nil?
         end
-        group = (before.negative? ? 0 : 1) + (after.negative? ? 0 : 2)
+        group = (below.negative? ? 0 : 1) + (above.negative? ? 0 : 2)
         d = gaps[s.vertical]
         d[s.cc] = d.fetch(s.cc, []).push([ s, group, so ])
       end
     end
     gaps.each_value do |direction|
       direction.each_value do |gap|
-        gap.sort! { |a, b| segment_order(a, b) }
+        #gap.sort! { |a, b| segment_order(a, b) }
         gleft = gap.select { |a| a[1].zero? }
+        gleft.sort! { |a, b| segment_order(a, b) }
         gright = gap.select { |a| a[1] == 3 }
-        gmiddle = zigzag_order(gap.select { |a| a[1] == 1 || a[1] == 2 })
+        gright.sort! { |a, b| segment_order(a, b) }
+        gright.reverse!
+        grul = gap.select() { |a| a[1] == 1 }
+        grul.sort! { |a, b| segment_order(a, b) }
+        glur = gap.select() { |a| a[1] == 2 }
+        glur.sort! { |a, b| segment_order(a, b) }
+        gmiddle = zigzag_order(grul, glur)
         gmiddle.each do |s|
           s[1] = 1
         end
@@ -687,7 +656,7 @@ def place_edges(work)
         denominator = 1 + c[0]
         (1...c.size).each do |k|
           denominator += c[k]
-          before[k] = c[k - 1] + before[k - 1]
+          before.push(c[k - 1] + before.last)
         end
         gap.each do |sg|
           sg[0].offset = c[sg[1]] + 1 - sg[0].offset if sg[1] > 1

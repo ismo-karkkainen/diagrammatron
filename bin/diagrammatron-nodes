@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
@@ -312,7 +312,7 @@ def work_copy(src, quiet)
       next
     end
     label = node['label']
-    if label2idx.key?(label) && edge_nodes.key?(label)
+    if label2idx.key?(label) && edge_nodes.member?(label)
       aargh "Edge-referred label used twice: #{label}"
       errors = true
     end
