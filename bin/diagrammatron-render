@@ -80,9 +80,10 @@ class Styles
   def base_styles(m, styles, group)
     d = styles.dig(group, 'default')
     if d.nil?
-      d = m.fetch('default', {}) if d.nil?
+      d = m.fetch('default', {}) # No default in styles.
     else
       m['default'] = m.fetch('default', {}).merge(d)
+      d = m['default']
     end
     styles.fetch(group, {}).each_pair do |name, values|
       s = d.clone
@@ -280,6 +281,27 @@ def apply(doc, template)
   out
 end
 
+def reverse_depth_order(a, b)
+  d = b['depth'] <=> a['depth']
+  return d unless d.zero?
+  d = a['index'] <=> b['index']
+  return d unless d.zero?
+  a['kind'] <=> b['kind']
+end
+
+def reverse_depth_sort(items)
+  arr = []
+  items.each_index do |k|
+    arr.push({
+      'depth' => items[k].fetch('depth', 0),
+      'index' => k,
+      'kind' => items[k].fetch('kind', 'unknown')
+    })
+  end
+  arr.sort! { |a, b| reverse_depth_order(a, b) }
+  arr.map { |x| items[x['index']] }
+end
+
 def main
   template = nil
   input = nil
@@ -353,6 +375,30 @@ Output is the file produced by the erb-template.
   y2min = parallel_edge_step_minima(ycoords)
   remap_coordinates(xcoords, xmax, x2min, doc.dig('diagram', 'edge_gap'))
   remap_coordinates(ycoords, ymax, y2min, doc.dig('diagram', 'edge_gap'))
+
+  doc['nodes'] = reverse_depth_sort(doc.fetch('nodes', []))
+  doc['edges'] = reverse_depth_sort(doc.fetch('edges', []))
+  all = doc.fetch('nodes', []).map do |a|
+    {
+      'kind' => 'node',
+      'depth' => a.fetch('depth', 0),
+      'item' => a
+    }
+  end
+  all.concat(doc.fetch('edges', []).map do |a|
+    {
+      'kind' => 'edge',
+      'depth' => a.fetch('depth', 0),
+      'item' => a
+    }
+  end)
+  all = reverse_depth_sort(all)
+  doc['all'] = all.map do |x|
+    {
+      'kind' => x['kind'],
+      'item' => x['item']
+    }
+  end
 
   dump_result(output, apply(doc, template), 5)
 end

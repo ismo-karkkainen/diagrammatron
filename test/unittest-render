@@ -67,6 +67,47 @@ assert(xcs.size, ycs.size, 'Each point in both arrays')
 assert(xcs.size, 5, 'Node 2 times for sides and each path point once')
 assert(c2c.size, 2, 'Only path ends added to coordinate, key, direction')
 
+$context = 'Styles base_styles'
+st = Styles.new({}, {})
+ts = {
+  'default' => {
+    'key' => 'value',
+    'key2' => 'value2'
+  },
+  'other' => {
+    'key2' => 'original',
+    'key3' => 'value3'
+  }
+}
+a = st.base_styles({}, { 'foo' => ts }, 'foo')
+assert(a.dig('default', 'key'), ts.dig('default', 'key'), 'default key')
+assert(a.dig('default', 'key2'), ts.dig('default', 'key2'), 'default key2')
+assert(a['default'].keys.size, 2, 'No extra keys')
+assert(a.dig('other', 'key'), ts.dig('default', 'key'), 'default key in other')
+assert(a.dig('other', 'key2'), ts.dig('other', 'key2'), 'other key2')
+assert(a.dig('other', 'key3'), ts.dig('other', 'key3'), 'other key3')
+assert(a['other'].keys.size, 3, 'other keys')
+ds = {
+  'default' => {
+    'key' => 'value0'
+  },
+  'another' => {
+    'key4' => 'value4'
+  }
+}
+b = st.base_styles(a, { 'foo' => ds }, 'foo')
+assert(b.dig('default', 'key'), ds.dig('default', 'key'), 'New default key')
+assert(b.dig('default', 'key2'), ts.dig('default', 'key2'), 'Old default key2')
+assert(b['default'].keys.size, 2, 'No extra keys')
+assert(b.dig('other', 'key'), ts.dig('default', 'key'), 'Same default key in other')
+assert(b.dig('other', 'key2'), ts.dig('other', 'key2'), 'Same other key2')
+assert(b.dig('other', 'key3'), ts.dig('other', 'key3'), 'Same other key3')
+assert(b['other'].keys.size, 3, 'Same other keys')
+assert(b.dig('another', 'key'), b.dig('default', 'key'), 'default key in another')
+assert(b.dig('another', 'key2'), ts.dig('default', 'key2'), 'another key2')
+assert(b.dig('another', 'key4'), ds.dig('another', 'key4'), 'another key4')
+assert(b['another'].keys.size, 3, 'another keys')
+
 $context = 'maxima'
 doc = {
   'nodes' => [

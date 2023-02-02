@@ -95,9 +95,37 @@ assert(s.range_overlap(slt), false, 'No overlap when to left')
 assert(sle.range_overlap(s), true, 'Overlaps when same coordinate 2')
 assert(slt.range_overlap(s), false, 'No overlap when to right')
 
+$context = 'Segment within'
+w = Segment.new(false, 0, [2, 1], 0, [false, false], 0)
+we = Segment.new(false, 0, [3, 1], 0, [false, false], 0)
+ww = Segment.new(false, 0, [3, 0], 0, [false, false], 0)
+assert(w.within(w), false, 'Not within itself')
+assert(w.within(we), false, 'Not within when same coordinate')
+assert(w.within(ww), true, 'Fully within')
+assert(we.within(w), false, 'Longer at same end')
+assert(ww.within(w), false, 'Longer')
+
 $context = 'Segment increase?'
 assert(sle.increase?, true, 'Increasing true')
 assert(slt.increase?, false, 'Decreasing false')
+
+$context = 'length_order'
+a = Segment.new(false, 1, [1, 2], 1, [false, false], 1, 0)
+b = Segment.new(false, 1, [-1, 1], 1, [false, false], 1, 0)
+assert(length_order([ a, nil, a ], [ b, nil, b ]), -1, 'Shorter first')
+assert(length_order([ b, nil, b ], [ a, nil, a ]), 1, 'Longer first')
+c = Segment.new(false, 1, [-1, 1], 2, [false, false], 1, 0)
+assert(length_order([ c, nil, c ], [ b, nil, b ]), 1, 'Greater index first')
+assert(length_order([ b, nil, b ], [ c, nil, c ]), -1, 'Smaller index first')
+
+$context = 'min_order'
+a = Segment.new(false, 1, [-1, 2], 1, [false, false], 1, 0)
+b = Segment.new(false, 1, [1, 4], 1, [false, false], 1, 0)
+assert(min_order([ a, nil, a ], [ b, nil, b ]), -1, 'Lower first')
+assert(min_order([ b, nil, b ], [ a, nil, a ]), 1, 'Higher first')
+c = Segment.new(false, 1, [1, 8], 2, [false, false], 1, 0)
+assert(min_order([ c, nil, c ], [ b, nil, b ]), 1, 'Greater index first')
+assert(min_order([ b, nil, b ], [ c, nil, c ]), -1, 'Smaller index first')
 
 $context = 'overlaps_set'
 assert(overlaps_set(s, [[0, 0, sle], [0, 0, slt]]), true, 'Overlaps on touch')
@@ -352,46 +380,6 @@ assert(ns.has_key?(Connection.new(2, 1)), true, '2 leaves right')
 assert(ns[Connection.new(2, 1)].index(full[3][0]).nil?, false, '2 enters right')
 assert(ns.has_key?(Connection.new(3, 3)), true, '3 enters left')
 assert(ns[Connection.new(2, 1)].index(full[3][0]).nil?, false, '3 leaves left')
-
-$context = 'segment_order'
-sa = segment(1, 0, 2, 0)
-sb = segment(2, 0, 4, 0)
-assert(segment_order([ sa, 0, sa ], [ sb, 1, sb ]), -1, 'Smaller group first')
-sc = segment(3, 0, 5, 0)
-assert(segment_order([ sb, 2, sb ], [ sc, 1, sc ]), 1, 'Greater group last')
-assert(segment_order([ sa, 0, sa ], [ sb, 0, sb ]),
-  -1, 'Shorter first in group 0')
-assert(segment_order([ sb, 0, sb ], [ sc, 0, sc ]),
-  -1, 'Lower first if same length in group 0')
-a = [ segment(3, 0, 5, 0), 0, sc, [0], [0] ]
-a.first.edge_index = 2
-b = [ segment(3, 0, 5, 0), 0, sc, [0], [0] ]
-b.first.edge_index = 1
-assert(segment_order(a, b), 1, 'Smaller edge index first, group 0')
-sd = segment(2, 0, 5, 0)
-assert(segment_order([ sa, 1, sa, [0], [0] ], [ sd, 1, sd, [0], [0] ]),
-  -1, 'Lower first in group 1')
-se = segment(1, 0, 5, 0)
-a = [ segment(3, 0, 5, 0), 1, sc, [0], [0] ]
-a.first.edge_index = 1
-b = [ segment(3, 0, 5, 0), 1, sc, [0], [0] ]
-b.first.edge_index = 2
-assert(segment_order(a, b), -1, 'Smaller edge index first, group 1')
-assert(segment_order([ sa, 2, sa, [0], [0] ], [ sd, 2, sd, [0], [0] ]),
-  1, 'Higher end first in group 2')
-sf = segment(-1, 0, 2, 0)
-assert(segment_order([ sf, 2, sf, [0], [0] ], [ sa, 2, sa, [0], [0] ]),
-  1, 'Higher minimum first in group 2')
-a = [ segment(3, 0, 5, 0), 2, sc, [0], [0] ]
-a.first.edge_index = 1
-b = [ segment(3, 0, 5, 0), 2, sc, [0], [0] ]
-b.first.edge_index = 2
-assert(segment_order(a, b), -1, 'Smaller edge index first, group 2')
-assert(segment_order([ sa, 3, sa, [0], [0] ], [ se, 3, se, [0], [0] ]),
-  1, 'Longer first in group 3')
-sg = segment(4, 0, 5, 0)
-assert(segment_order([ sa, 3, sa, [0], [0] ], [ sg, 3, sg, [0], [0] ]),
-  1, 'Higher end first in group 3')
 
 $context = 'direct_range'
 p1 = Path.new(0, [0, 1]).push(segment(1, 0, 1, 2))

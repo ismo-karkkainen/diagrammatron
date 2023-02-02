@@ -158,6 +158,10 @@ Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_ind
   def increase?
     range[0] < range[1]
   end
+
+  def within(s)
+    s.range.min < range.min && range.max < s.range.max
+  end
 end
 
 def segment(x0, y0, x1, y1)
@@ -415,40 +419,16 @@ def path_order_at_side(a, b, conn)
   d
 end
 
-def segment_order(a, b)
-  d = a[1] <=> b[1]
+def length_order(a, b)
+  d = a[2].length <=> b[2].length
   return d unless d.zero?
-  case a[1]
-  when 0 # Ascending on length, range minimum. =|
-    d = a[2].length <=> b[2].length
-    return d unless d.zero?
-    d = a[2].range.min <=> b[2].range.min
-    return d unless d.zero?
-  when 1 # Top left, vertical, bottom right: -|_
-    d = a[2].range.min <=> b[2].range.min # Ascend on minimum.
-    return d unless d.zero?
-    d = a[2].length <=> b[2].length # Ascend on length.
-    return d unless d.zero?
-  when 2 # From top right, down, bottom left: _|-
-    d = a[2].range.max <=> b[2].range.max # Descend on maximum.
-    return -d unless d.zero?
-    d = a[2].length <=> b[2].length # Ascend on length.
-    return d unless d.zero?
-  when 3 # Descending on length, range maximum. |=
-    d = a[2].length <=> b[2].length
-    return -d unless d.zero?
-    d = a[2].range.max <=> b[2].range.max
-    return -d unless d.zero?
-  end
   a[0].edge_index <=> b[0].edge_index
 end
 
-def zigzag_order(from_right_up_to_left, from_left_up_to_right)
-  # Eventually interleave the two sets, if it makes sense.
-  out = []
-  from_right_up_to_left.each { |x| out.push x }
-  from_left_up_to_right.each { |x| out.push x }
-  out
+def min_order(a, b)
+  d = a[2].range.min <=> b[2].range.min
+  return d unless d.zero?
+  a[0].edge_index <=> b[0].edge_index
 end
 
 def overlaps_set(c, others)
@@ -458,47 +438,59 @@ def overlaps_set(c, others)
   false
 end
 
-def group_minimal_offsets(group)
-  return 0 if group.empty?
-  off = { 1 => [] }
-  cands = off.keys
-  group.each do |a|
-    fit = false
-    cands.each do |k|
-      next if overlaps_set(a[2], off[k])
-      off[k].push(a)
-      fit = true
-      break
+def layered_order(u_shaped, z_shaped)
+  u_shaped.sort! { |a, b| length_order(a, b) }
+  z_shaped.sort! { |a, b| min_order(a, b) }
+  out = []
+  layer = []
+  until u_shaped.empty?
+    rejects = []
+    found = false
+    u_shaped.each do |a|
+      unless overlaps_set(a[2], layer)
+        found = true
+        # Creates crossing by putting in front of shorter segment fully within?
+        rejects.each do |r|
+          if r[2].within(a[2])
+            found = false
+            break
+          end
+        end
+      end
+      if found
+        layer.push a
+        found = false
+      else
+        rejects.push a
+      end
     end
-    next if fit
-    cands.push(cands.last + 1)
-    off[cands.last] = [ a ]
-  end
-  off.each_pair do |offset, fitting|
-    fitting.each do |sg|
-      sg[0].offset = offset
+    u_shaped = rejects
+    unless layer.empty?
+      out.concat layer
+      out.push nil
+      layer = []
     end
   end
-  off.keys.max
-end
-
-def group_stacked_offsets(group)
-  return 0 if group.empty?
-  group.each_index do |k|
-    group[k][0].offset = k + 1
+  until z_shaped.empty?
+    rejects = []
+    found = false
+    z_shaped.each do |a|
+      if overlaps_set(a[2], layer)
+        rejects.push a
+      else
+        layer.push a
+        found = true
+      end
+    end
+    z_shaped = rejects
+    unless layer.empty?
+      out.concat layer
+      out.push nil
+      layer = []
+    end
   end
-  return group.size
-%q(
-  # This produces narrower gaps but they may be less clear.
-  prev = group[0]
-  prev[0].offset = 1
-  (1...group.size).each do |k|
-    g = group[k]
-    g[0].offset = prev[0].offset + (g[2].range_overlap(prev[2]) ? 1 : 0)
-    prev = g
-  end
-  prev[0].offset
-)
+  out.concat(layer) unless layer.empty?
+  out
 end
 
 def direct_range(paths)
@@ -631,36 +623,22 @@ def place_edges(work)
     end
     gaps.each_value do |direction|
       direction.each_value do |gap|
-        #gap.sort! { |a, b| segment_order(a, b) }
         gleft = gap.select { |a| a[1].zero? }
-        gleft.sort! { |a, b| segment_order(a, b) }
+        grul = gap.select { |a| a[1] == 1 }
+        glur = gap.select { |a| a[1] == 2 }
         gright = gap.select { |a| a[1] == 3 }
-        gright.sort! { |a, b| segment_order(a, b) }
-        gright.reverse!
-        grul = gap.select() { |a| a[1] == 1 }
-        grul.sort! { |a, b| segment_order(a, b) }
-        glur = gap.select() { |a| a[1] == 2 }
-        glur.sort! { |a, b| segment_order(a, b) }
-        gmiddle = zigzag_order(grul, glur)
-        gmiddle.each do |s|
-          s[1] = 1
-        end
-        gap = gleft + gmiddle + gright
-        c = [
-          group_minimal_offsets(gleft),
-          group_stacked_offsets(gmiddle),
-          0,
-          group_minimal_offsets(gright)
-        ]
-        before = [ 0 ]
-        denominator = 1 + c[0]
-        (1...c.size).each do |k|
-          denominator += c[k]
-          before.push(c[k - 1] + before.last)
-        end
-        gap.each do |sg|
-          sg[0].offset = c[sg[1]] + 1 - sg[0].offset if sg[1] > 1
-          sg[0].offset = Rational(sg[0].offset + before[sg[1]], denominator)
+        all = layered_order(gleft, grul)
+        all.push nil
+        all.concat(layered_order(gright, glur).reverse)
+        # Give each rational offset using layer index + 1 and layer count + 2.
+        denominator = 2 + all.count { |x| x.nil? }
+        layer = 1
+        all.each do |sg|
+          if sg.nil?
+            layer += 1
+          else
+            sg[0].offset = Rational(layer, denominator)
+          end
         end
       end
     end

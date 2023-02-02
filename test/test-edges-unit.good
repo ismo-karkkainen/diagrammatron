@@ -40,8 +40,21 @@ ok: Segment range_overlap: Overlaps when same coordinate
 ok: Segment range_overlap: No overlap when to left
 ok: Segment range_overlap: Overlaps when same coordinate 2
 ok: Segment range_overlap: No overlap when to right
+ok: Segment within: Not within itself
+ok: Segment within: Not within when same coordinate
+ok: Segment within: Fully within
+ok: Segment within: Longer at same end
+ok: Segment within: Longer
 ok: Segment increase?: Increasing true
 ok: Segment increase?: Decreasing false
+ok: length_order: Shorter first
+ok: length_order: Longer first
+ok: length_order: Greater index first
+ok: length_order: Smaller index first
+ok: min_order: Lower first
+ok: min_order: Higher first
+ok: min_order: Greater index first
+ok: min_order: Smaller index first
 ok: overlaps_set: Overlaps on touch
 ok: overlaps_set: No overlap
 ok: segment: Vertical
@@ -125,18 +138,6 @@ ok: node_and_side_sets: 2 leaves right
 ok: node_and_side_sets: 2 enters right
 ok: node_and_side_sets: 3 enters left
 ok: node_and_side_sets: 3 leaves left
-ok: segment_order: Smaller group first
-ok: segment_order: Greater group last
-ok: segment_order: Shorter first in group 0
-ok: segment_order: Lower first if same length in group 0
-ok: segment_order: Smaller edge index first, group 0
-ok: segment_order: Lower first in group 1
-ok: segment_order: Smaller edge index first, group 1
-ok: segment_order: Higher end first in group 2
-ok: segment_order: Higher minimum first in group 2
-ok: segment_order: Smaller edge index first, group 2
-ok: segment_order: Longer first in group 3
-ok: segment_order: Higher end first in group 3
 ok: direct_range: Singleton
 ok: direct_range: First
 ok: direct_range: Second

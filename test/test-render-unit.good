@@ -22,6 +22,24 @@ ok: push_coords: Mid-points not added to coordinate, key, direction
 ok: separate_coordinates: Each point in both arrays
 ok: separate_coordinates: Node 2 times for sides and each path point once
 ok: separate_coordinates: Only path ends added to coordinate, key, direction
+ok: Styles base_styles: default key
+ok: Styles base_styles: default key2
+ok: Styles base_styles: No extra keys
+ok: Styles base_styles: default key in other
+ok: Styles base_styles: other key2
+ok: Styles base_styles: other key3
+ok: Styles base_styles: other keys
+ok: Styles base_styles: New default key
+ok: Styles base_styles: Old default key2
+ok: Styles base_styles: No extra keys
+ok: Styles base_styles: Same default key in other
+ok: Styles base_styles: Same other key2
+ok: Styles base_styles: Same other key3
+ok: Styles base_styles: Same other keys
+ok: Styles base_styles: default key in another
+ok: Styles base_styles: another key2
+ok: Styles base_styles: another key4
+ok: Styles base_styles: another keys
 ok: maxima: x 0 maximum is 3
 ok: maxima: y 1 maximum is 4
 ok: maxima: x 2 maximum is 5

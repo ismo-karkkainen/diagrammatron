@@ -6,45 +6,48 @@ hh += $render.doc.dig('diagram', 'height_margin')
 out = [
   %(<svg width="#{w + $render.doc.dig('diagram', 'width_margin')}" height="#{hh}" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1">)
 ]
-$render.doc.fetch('edges', []).each do |edge|
-  linestyle = %(fill="none" stroke="#{edge['stroke']}" stroke-width="#{edge['stroke_width']}")
-  path = edge.fetch('path', nil)
-  next if path.nil?
-  path.each do |p|
-    p['xo'] = p['xo'].to_i.to_s
-    p['yo'] = (hh - p['yo']).to_i.to_s
-  end
-  if path.size == 2
-    out.push(%(<line #{linestyle} x1="#{path[0]['xo']}" x2="#{path[1]['xo']}" y1="#{path[0]['yo']}" y2="#{path[1]['yo']}"/>))
-  else
-    pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
-    out.push(%(<polyline #{linestyle} points="#{pts.join(' ')}"/>))
-  end
-end
-$render.doc.fetch('nodes', []).each do |node|
-  w = node['w'].to_i
-  h = node['h'].to_i
-  x = node['xo'].to_i
-  y = hh - node['yo'].to_i - h
-  nodestyle = %(fill="#{node['fill']}" stroke="#{node['stroke']}" stroke-width="#{node['stroke_width']}")
-  out.push(%(<rect #{nodestyle} height="#{h}" width="#{w}" x="#{x}" y="#{y}"/>))
-  x += node['width_margin']
-  fs = node['font_size']
-  lh = fs * (1 + node['font_line_spacing'])
-  y += node['height_margin'] + fs * node['font_ascend'] # Baseline for first line.
-  url = node.fetch('url', nil)
-  url.encode!(:xml => :attr) unless url.nil?
-  y0 = y
-  textstyle = %(fill="#{node['font_fill']}" font-family="serif" font-size="#{fs}" stroke="#{node['font_fill']}" stroke-width="0" xml:space="preserve")
-  linkstyle = %(fill="#{node['url_fill']}" font-family="serif" font-size="#{fs}" stroke="#{node['url_fill']}" stroke-width="0" xml:space="preserve")
-  node['text'].each do |line|
-    line.encode!(:xml => :text)
-    if url.nil?
-      out.push(%(<text #{textstyle} x="#{x}" y="#{y0}">#{line}</text>))
-    else
-      out.push(%(<a xlink:href=#{url} target="_parent"><text #{linkstyle} x="#{x}" y="#{y0}">#{line}</text></a>))
+$render.doc['all'].each do |item|
+  if item['kind'] == 'node'
+    node = item['item']
+    w = node['w'].to_i
+    h = node['h'].to_i
+    x = node['xo'].to_i
+    y = hh - node['yo'].to_i - h
+    nodestyle = %(fill="#{node['fill']}" stroke="#{node['stroke']}" stroke-width="#{node['stroke_width']}")
+    out.push(%(<rect #{nodestyle} height="#{h}" width="#{w}" x="#{x}" y="#{y}"/>))
+    x += node['width_margin']
+    fs = node['font_size']
+    lh = fs * (1 + node['font_line_spacing'])
+    y += node['height_margin'] + fs * node['font_ascend'] # Baseline for first line.
+    url = node.fetch('url', nil)
+    url.encode!(:xml => :attr) unless url.nil?
+    y0 = y
+    textstyle = %(fill="#{node['font_fill']}" font-family="serif" font-size="#{fs}" stroke="#{node['font_fill']}" stroke-width="0" xml:space="preserve")
+    linkstyle = %(fill="#{node['url_fill']}" font-family="serif" font-size="#{fs}" stroke="#{node['url_fill']}" stroke-width="0" xml:space="preserve")
+    node['text'].each do |line|
+      line.encode!(:xml => :text)
+      if url.nil?
+        out.push(%(<text #{textstyle} x="#{x}" y="#{y0}">#{line}</text>))
+      else
+        out.push(%(<a xlink:href=#{url} target="_parent"><text #{linkstyle} x="#{x}" y="#{y0}">#{line}</text></a>))
+      end
+      y0 += lh # Shift baseline by full line + spacing height.
     end
-    y0 += lh # Shift baseline by full line + spacing height.
+  else
+    edge = item['item']
+    linestyle = %(fill="none" stroke="#{edge['stroke']}" stroke-width="#{edge['stroke_width']}")
+    path = edge.fetch('path', nil)
+    next if path.nil?
+    path.each do |p|
+      p['xo'] = p['xo'].to_i.to_s
+      p['yo'] = (hh - p['yo']).to_i.to_s
+    end
+    if path.size == 2
+      out.push(%(<line #{linestyle} x1="#{path[0]['xo']}" x2="#{path[1]['xo']}" y1="#{path[0]['yo']}" y2="#{path[1]['yo']}"/>))
+    else
+      pts = path.map { |p| "#{p['xo']},#{p['yo']}" }
+      out.push(%(<polyline #{linestyle} points="#{pts.join(' ')}"/>))
+    end
   end
 end
 out.join("\n")

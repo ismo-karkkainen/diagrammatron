@@ -148,6 +148,14 @@ external styles either must adapt to the size limitation, in the extreme case
 making all nodes have the same dimensions, or the edges will not reach the node
 side unless you perform extra processing in the template.
 
+Nodes and edges can have a depth-field that is used to sort nodes in descending
+order of depth. Values with largest depth are first. Nodes and edges are also
+combined into an array "all" with "kind" as "node" or "edge", depth, and "item"
+as the node or edge object. The depth is probably most useful in style when you
+want to render different colored edges behind or above others. Nodes do not
+overlap but the ordering with regard to edges may show if you render for
+example arrow-heads at the end of edges.
+
 Each node, edge, and the diagram itself will have all fields in style "default"
 and any styles that are listed in the node or edge copied to each item. The
 template code can expect to find all values present in the node or edge.
