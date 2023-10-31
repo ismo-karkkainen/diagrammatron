@@ -8,7 +8,6 @@ require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
-require 'pathname'
 
 
 def vertical(work)
@@ -139,7 +138,7 @@ def shifts(count)
   side = (count / 2.0).ceil
   side = ((side / 4) + ((side % 4).positive? ? 1 : 0)) * 4
   xs = Array.new(side) { |index| Integer((index - side / 2).round) }
-  (0..3).each { |k| xs.push(-xs[k]) }
+  4.times { |k| xs.push(-xs[k]) }
   ys = Array.new(xs)
   xs.rotate!(side / 2 - 1)
   ys.rotate!(side - 1) # First half-way to offset with xs, then like xs.
@@ -281,36 +280,23 @@ def work_copy(src, quiet)
   errors = false
   edge_nodes = Set.new
   edges = src.fetch('edges', [])
-  unedges = []
   selfedges = []
   edges.each_index do |k|
     edge = edges[k]
-    labels = edge.fetch('between', [])
-    if labels.nil? || labels.empty?
-      unedges.push(k)
-    elsif labels.size == 2
-      if labels.first == labels.last
-        selfedges.push(k)
-      else
-        edge_nodes.add labels.first
-        edge_nodes.add labels.last
-        work[:edges].push({ idx: k, between: [ labels[0], labels[1] ] })
-      end
+    labels = edge['between']
+    if labels.first == labels.last
+      selfedges.push(k)
     else
-      aargh "Edge #{k + 1} does not have two labels in 'between'"
-      errors = true
+      edge_nodes.add labels.first
+      edge_nodes.add labels.last
+      work[:edges].push({ idx: k, between: [ labels[0], labels[1] ] })
     end
   end
   labeled_nodes = Set.new
-  unlabeled = []
   nodes = src.fetch('nodes', [])
   nodes.each_index do |k|
     work[:nodes].push({ idx: k })
     node = nodes[k]
-    unless node.key? 'label'
-      unlabeled.push k
-      next
-    end
     label = node['label']
     if label2idx.key?(label) && edge_nodes.member?(label)
       aargh "Edge-referred label used twice: #{label}"
@@ -327,9 +313,7 @@ def work_copy(src, quiet)
   return nil if errors
   unused = labeled_nodes - edge_nodes
   [ [ unused.to_a, 'unconnected labeled nodes' ],
-    [ unlabeled, 'unlabeled nodes' ],
-    [ selfedges, 'edges from node to itself' ],
-    [ unedges, 'edges without end-points' ]
+    [ selfedges, 'edges from node to itself' ]
   ].each do |x|
     next if quiet || x.first.empty?
     aargh("Note, #{x.last}: #{x.first.join(' ')}")
@@ -351,6 +335,8 @@ def prepare_output(doc, work)
 end
 
 def main
+  input_schema = 'nodes'
+  output_schema = 'edges'
   input = nil
   output = nil
   algo = 'pathlength'
@@ -378,19 +364,9 @@ def main
       $stdout.puts %(
 Algorithm names are: #{$algorithms.keys.sort.join(' ')}
 
-Input YAML file is expected to be like:
----
-nodes:
-  - label: something
-  - label: another
-  - ignored: "Since no label. Still placed."
-  - label: "Unused and ok. Still placed."
-edges:
-  - between: [ something, another ]
-  - between: [ something, something ] # Ignored.
-  - between: [ ] # Ignored.
-  - ignored: "Since no between."
-...
+Input YAML file schema is returned by:
+diagrammatron-schema #{input_schema}
+
 There can be other fields present but they are ignored. The nodes will
 receive values xo and yo that indicate horizontal and vertical coordinates.
 
@@ -408,7 +384,7 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
   end
   algo = $algorithms[algo]
 
-  doc = load_source(input)
+  doc = load_verified(input, input_schema)
   return 2 if doc.nil?
 
   begin

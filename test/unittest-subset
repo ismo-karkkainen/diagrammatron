@@ -1,0 +1,219 @@
+#!/usr/bin/env ruby
+
+# Copyright 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require_relative './unittest'
+require 'yaml'
+require 'set'
+
+$unit_test = 0
+load '../bin/diagrammatron-subset'
+
+$context = 'Item'
+node = {'label' => 'a'}
+n = Item.new(node)
+assert(n.item, node, 'Node got copied')
+assert(n.ids.size, 1, 'One id in node')
+l2i = { 'a' => 10, 'b' => 11 }
+edge = {'between' => ['a', 'b']}
+e = Item.new(edge, l2i)
+assert(e.item, edge, 'Edge got copied')
+assert(e.ids.size, 3, 'Edge and end-point ids in edge')
+assert(n.ids.first < e.ids.first, true, 'Edge id is greater than previous')
+assert(e.ids[1], l2i[edge['between'].first], 'Start node id copied')
+assert(e.ids[2], l2i[edge['between'].last], 'End node id copied')
+broken = {'between' => ['a', 'c']}
+b = Item.new(broken, l2i)
+assert(b.ids.size, 3, 'Edge and end-point ids in broken edge')
+assert(e.ids.first < b.ids.first, true, 'Edge id still greater than previous')
+assert(b.ids[1], l2i[broken['between'].first], 'Broken start node id copied')
+assert(b.ids[2], -1, 'End node id invalid')
+
+$context = 'work_copy'
+Item.reset
+src = {
+  'nodes' => [
+    {'label' => 'a'},
+    {'label' => 'b'},
+    {'label' => 'c'}
+  ],
+  'edges' => [
+    {'between' => ['a', 'b']},
+    {'between' => ['a', 'c']}
+  ],
+  'other' => 'something'
+}
+w = work_copy(src)
+assert(w.key?(:nodes), true, 'Work copy has nodes')
+assert(w.key?(:edges), true, 'Work copy has edges')
+assert(w.size, 2, 'Additional property not present')
+seen = Set.new
+%i[edges nodes].each do |cat|
+  assert(w[cat].size, src[cat.to_s].size, "Same number of #{cat.to_s}")
+  w[cat].each_index do |k|
+    assert(w[cat][k].item, src[cat.to_s][k], "Same #{cat.to_s} item #{k}")
+    assert(seen.member?(w[cat][k].ids.first), false, "#{cat.to_s} item #{k} id unique")
+    seen.add(w[cat][k].ids.first)
+  end
+end
+seen = Set.new(w[:nodes].map { |x| x.ids.first })
+w[:edges].each do |e|
+  assert(e.ids.size, 3, 'Edge has 3 ids')
+  (1..2).each do |k|
+    assert(seen.member?(e.ids[k]), true, "Edge node id #{k} is a node id")
+  end
+end
+
+$context = 'prepare_output'
+Item.reset
+src = {
+  'nodes' => [
+    {'label' => 'a'}, # 0
+    {'label' => 'b'}, # 1
+    {'label' => 'c'}  # 2
+  ],
+  'edges' => [
+    {'between' => ['a', 'b']}, # 3
+    {'between' => ['a', 'c']}  # 4
+  ],
+  'other' => 'something'
+}
+w = work_copy(src)
+prepare_output(src, w, Set.new([ 0, 1, 3, 4 ]))
+assert(src.key?('other'), true, 'Additional property remains')
+assert(src.key?('nodes'), true, 'nodes is present')
+assert(src.key?('edges'), true, 'edges is present')
+assert(src['nodes'].size, 2, '2 nodes remain')
+assert(src['nodes'][0]['label'], 'a', 'a node remains')
+assert(src['nodes'][1]['label'], 'b', 'b node remains')
+assert(src['edges'].size, 1, '1 edge remains')
+assert(src['edges'][0]['between'][0], 'a', 'edge from a')
+assert(src['edges'][0]['between'][1], 'b', 'edge to b')
+
+$context = 'gather_set'
+Item.reset
+src = {
+  'nodes' => [
+    {'label' => 'a'},
+    {'label' => 'b'},
+    {'label' => 'c'}
+  ],
+  'edges' => [
+    {'between' => ['a', 'b']},
+    {'between' => ['a', 'c']}
+  ],
+  'other' => 'something'
+}
+w = work_copy(src)
+rules = {
+  'sets' => {
+    'a' => {
+      nodes: {
+        'label' => [ Regexp.new('a') ]
+      }
+    },
+    'ab' => {
+      nodes: {
+        'label' => [ /[ab]{1}/ ]
+      },
+      edges: {
+        'between' => [ /[ab]+/ ]
+      }
+    },
+    'ac' => {
+      nodes: {
+        'label' => [ /[ac]{1}/ ]
+      },
+      edges: {
+        'between' => [ /.*/ ]
+      }
+    }
+  }
+}
+s = gather_set(w, rules, 'a')
+assert(s.size, 1, 'set size is 1')
+assert(s.member?(w[:nodes][0].ids.first), true, 'a node is in set')
+s = gather_set(w, rules, 'ab')
+assert(s.size, 4, 'set size is 4')
+assert(s.member?(w[:nodes][0].ids.first), true, 'a node is in set')
+assert(s.member?(w[:nodes][1].ids.first), true, 'b node is in set')
+assert(s.member?(w[:edges][0].ids.first), true, 'ab edge is in set')
+assert(s.member?(w[:edges][1].ids.first), true, 'ac edge is in set')
+s = gather_set(w, rules, 'ac')
+assert(s.size, 4, 'set size is 4')
+assert(s.member?(w[:nodes][0].ids.first), true, 'a node is in set')
+assert(s.member?(w[:nodes][2].ids.first), true, 'c node is in set')
+assert(s.member?(w[:edges][0].ids.first), true, 'ab edge is in set')
+assert(s.member?(w[:edges][1].ids.first), true, 'ac edge is in set')
+s = gather_set(w, rules, 'undefined')
+assert(s, 9, 'undefined set detected')
+
+$context = 'gather'
+Item.reset
+src = {
+  'nodes' => [
+    {'label' => 'a'},
+    {'label' => 'b'},
+    {'label' => 'c'}
+  ],
+  'edges' => [
+    {'between' => ['a', 'b']},
+    {'between' => ['a', 'c']}
+  ],
+  'other' => 'something'
+}
+w = work_copy(src)
+rules = {
+  'expressions' => {
+    'top' => ['middle', :plus, 'bottom'],
+    'middle' => ['ab'],
+    'empty' => ['middle', :minus,  'ab'],
+    'duplicate' => ['middle', :plus, 'ab'],
+    'bottom' => ['top'],
+    'badop' => ['middle', :other, 'middle'],
+    'undefined' => ['undef']
+  },
+  'sets' => {
+    'a' => {
+      nodes: {
+        'label' => [ Regexp.new('a') ]
+      }
+    },
+    'ab' => {
+      nodes: {
+        'label' => [ /[ab]{1}/ ]
+      },
+      edges: {
+        'between' => [ /[ab]+/ ]
+      }
+    },
+    'ac' => {
+      nodes: {
+        'label' => [ /[ac]{1}/ ]
+      },
+      edges: {
+        'between' => [ /.*/ ]
+      }
+    }
+  }
+}
+cache = {}
+r = gather(w, rules, 'a', [], cache)
+assert(cache.key?('a'), true, 'set a is in cache')
+r2 = gather(w, rules, 'a', [], cache)
+assert(r.equal?(r2), true, 'same object is returned')
+r = gather(w, rules, 'top', [], cache)
+assert(r, 8, 'loop detected')
+r = gather(w, rules, 'undefined', [], cache)
+assert(r, 7, 'undefined')
+r = gather(w, rules, 'badop', [], cache)
+assert(r, 100, 'bad operator')
+r = gather(w, rules, 'middle', [], cache)
+assert(r.is_a?(Set), true, 'expression to set')
+r = gather(w, rules, 'empty', [], cache)
+assert(r.empty?, true, 'empty')
+r = gather(w, rules, 'duplicate', [], cache)
+assert(r, cache['ab'], 'duplicate')
+
+exit $unit_test

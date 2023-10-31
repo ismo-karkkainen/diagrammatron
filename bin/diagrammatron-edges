@@ -125,7 +125,7 @@ Segment = Struct.new(:vertical, :cc, :range, :edge_index, :at_node, :segment_ind
     node_subset.each do |n|
       node = work[:nodes][n]
       next unless cc == node[ck]
-      (0..1).each do |k|
+      2.times do |k|
         return true if range[i0] < node[rk] && node[rk] < range[i1]
         next if at_node[k]
         return true if range[k] == node[rk]
@@ -631,7 +631,7 @@ def place_edges(work)
         all.push nil
         all.concat(layered_order(gright, glur).reverse)
         # Give each rational offset using layer index + 1 and layer count + 2.
-        denominator = 2 + all.count { |x| x.nil? }
+        denominator = 2 + all.count(&:nil?)
         layer = 1
         all.each do |sg|
           if sg.nil?

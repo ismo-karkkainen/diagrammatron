@@ -4,13 +4,13 @@ steps:
   args:
   - "-c"
   - "mkdir _logs && cp README.md _logs && cd _logs && git log -1 --format='%H' > commit.txt && git log -1 --format='%H %cI %s' > info.txt"
-- name: "$_REPO/debian-ruby-2.7:latest"
-  entrypoint: "sh"
-  args: [ "-c", "$$PWD/test/cloudbuild.sh Debian $$PWD" ]
 - name: "$_REPO/debian-ruby-3.0:latest"
   entrypoint: "sh"
   args: [ "-c", "$$PWD/test/cloudbuild.sh Debian $$PWD" ]
 - name: "$_REPO/debian-ruby-3.1:latest"
+  entrypoint: "sh"
+  args: [ "-c", "$$PWD/test/cloudbuild.sh Debian $$PWD" ]
+- name: "$_REPO/debian-ruby-3.2:latest"
   entrypoint: "sh"
   args: [ "-c", "$$PWD/test/cloudbuild.sh Debian $$PWD" ]
 - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"

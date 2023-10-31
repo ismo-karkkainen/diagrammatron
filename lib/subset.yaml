@@ -1,0 +1,55 @@
+type: object
+properties:
+  expressions:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        expression:
+          type: string
+          default: ''
+  sets:
+    type: array
+    items:
+      $ref: "#/$defs/SetRules"
+    minItems: 0
+    default: []
+$defs:
+  SetRules:
+    type: object
+    required:
+    - name
+    properties:
+      name:
+        type: string
+      nodes:
+        $ref: "#/$defs/Rules"
+      edges:
+        $ref: "#/$defs/Rules"
+      any:
+        $ref: "#/$defs/Rules"
+  Rules:
+    type: array
+    items:
+      $ref: "#/$defs/FieldRules"
+    minItems: 0
+    default: []
+  FieldRules:
+    type: object
+    required:
+    - name
+    - rules
+    properties:
+      name:
+        type: string
+      rules:
+        type: array
+        items:
+          type: string
+        minItems: 0

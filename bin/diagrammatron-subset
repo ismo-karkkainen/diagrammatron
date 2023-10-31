@@ -1,0 +1,188 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Copyright © 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require_relative '../lib/common'
+require_relative '../lib/subsets'
+require 'optparse'
+require 'yaml'
+require 'set'
+require 'pathname'
+
+class Item
+  @@counter = 0
+  attr_reader :item, :ids
+
+  def initialize(item, label2id = {})
+    @item = item
+    @ids = [ @@counter ]
+    @@counter += 1
+    # This silently removes edges that have no valid end-point.
+    item.fetch('between', []).each { |x| @ids.push(label2id.fetch(x, -1)) }
+  end
+
+  def self.reset
+    @@counter = 0
+  end
+end
+
+def work_copy(src)
+  nodes = src.fetch('nodes', []).map { |n| Item.new(n) }
+  label2id = {}
+  nodes.each { |x| label2id[x.item['label']] = x.ids.first }
+  edges = src.fetch('edges', []).map { |e| Item.new(e, label2id) }
+  {
+    edges: edges,
+    nodes: nodes
+  }
+end
+
+def prepare_output(doc, work, chosen)
+  %i[edges nodes].each do |s|
+    work[s].select! do |x|
+      (x.ids.index { |id| !chosen.member?(id) }).nil?
+    end
+    doc[s.to_s] = work[s].map(&:item)
+  end
+end
+
+def gather_set(work, rules, current)
+  r = rules['sets'].fetch(current, nil)
+  return aargh("Undefined set: #{current}", 9) if r.nil?
+  result = Set.new
+  %i[nodes edges].each do |category|
+    work[category].each do |item|
+      if match_item(item.item, r.fetch(category, {}))
+        result.add(item.ids.first)
+      end
+    end
+  end
+  result
+end
+
+def gather(work, rules, current, above, set_cache)
+  e = rules['sets'].fetch(current, nil)
+  unless e.nil?
+    set = set_cache.fetch(current, nil)
+    return set unless set.nil?
+    # Evaluate needed set, store, and return it.
+    set = gather_set(work, rules, current)
+    set_cache[current] = set # Error may end up in cache, not a problem.
+    return set
+  end
+  return aargh("Loop in expressions for #{current}: #{above.reverse.join("\n")}", 8) if above.include?(current)
+  e = rules['expressions'].fetch(current, nil)
+  return aargh("Undefined expression: #{current}", 7) if e.nil?
+  above.push(current)
+  result = gather(work, rules, e.first, above, set_cache)
+  return result unless result.is_a?(Set)
+  (1...e.size).step(2) do |k|
+    op = e[k]
+    id = e[k + 1]
+    s = gather(work, rules, id, above, set_cache)
+    return s unless s.is_a?(Set)
+    case op
+    when :plus then result += s
+    when :minus then result -= s
+    else
+      return aargh("Unsupported operator: #{op}", 100)
+    end
+  end
+  above.pop
+  result
+end
+
+def main
+  input_schema = 'nodes'
+  input = nil
+  output = nil
+  selected = nil
+  ENV['POSIXLY_CORRECT'] = '1'
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 20
+    opts.banner = 'Usage: diagrammatron-subset [options] rule-file-names...'
+    opts.separator ''
+    opts.separator 'Options:'
+    opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
+      input = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. Written to stdout if not given.') do |filename|
+      output = filename
+    end
+    opts.on('-s', '--select NAME', 'Select expression or subset NAME result.') do |name|
+      selected = name
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts %(#{opts}
+Rule files can specify named subset selection rules and named expressions on
+how to combine the subsets when determining which nodes and edges will form the
+diagram.
+
+Subset selection rules can apply to nodes only, edges only, or both. The rules
+give for a field name an array of strings or patterns. If a node or edge
+matches any of the rules, it belongs to the subset.
+
+Expressions can refer to the subset or expression names and use operations to
+form more complex subsets. In the simplest form, they just are a subset name.
+Operations are a + b to add elements of b and a - b to drop elements of b. If
+expression and subset have the same name, identifier refers to subset.
+
+The select option gives the name of the expression or subset to use.
+
+Edges to removed nodes are removed. Nodes with all edges removed are retained.
+Output is the input file with remaining nodes and edges.
+
+Input YAML file schema is returned by:
+diagrammatron-schema #{input_schema}
+
+Rule YAML file schema is returned by:
+diagrammatron-schema subset
+
+Note that input schema is minimal and does not restrict running this program
+at a later stage in the pipeline after other tools have added their fields.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  if selected.nil?
+    return aargh('Must select an expression or subset to use for output.', 2)
+  end
+
+  rules = {}
+  ARGV.each do |filename|
+    r = load_verified(filename, 'subset')
+    return 5 if r.nil?
+    return 6 unless check_rules(r, filename)
+    merge_any(r) # The 'any' field exists to avoid duplicating rules by hand.
+    merge_rules(rules, r)
+  end
+
+  if rules.fetch('sets', {}).key? selected
+    # Refers directly to subset so other expressions do not matter.
+    rules['expressions'] = { selected => selected }
+  elsif !rules.fetch('expressions', {}).key? selected
+    return aargh("Selected #{selected} is not expression or subset name.", 2)
+  end
+
+  doc = load_verified(input, input_schema)
+  return 2 if doc.nil?
+
+  begin
+    work = work_copy(doc)
+    return 3 if work.nil?
+  rescue StandardError
+    return aargh('Error processing input.', 3)
+  end
+
+  chosen = gather(work, rules, selected, [], {})
+  return chosen unless chosen.is_a?(Set)
+  prepare_output(doc, work, chosen)
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+end
+
+exit(main) if (defined? $unit_test).nil?

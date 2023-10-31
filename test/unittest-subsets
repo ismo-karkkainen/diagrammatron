@@ -1,0 +1,278 @@
+#!/usr/bin/env ruby
+
+# Copyright 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require_relative './unittest'
+require 'yaml'
+
+$unit_test = 0
+load '../lib/subsets.rb'
+
+$context = 'split_expression_string'
+r1 = split_expression_string('')
+assert(r1.empty?, true, 'Empty string, empty array')
+r2 = split_expression_string('  ')
+assert(r2.empty?, true, 'Spaces string, empty array')
+r3 = split_expression_string(' foo ')
+assert(r3.size, 1, 'One')
+r4 = split_expression_string(' foo bar ')
+assert(r4.size, 2, 'Two')
+r5 = split_expression_string(' foo * bar')
+assert(r5.size, 3, 'Three')
+r5.each_index { |k| assert(r5[k].is_a?(String), true, "Item #{k} is string") }
+r6 = split_expression_string('foo +   bar')
+assert(r6.size, 3, 'Three')
+assert(r6[0].is_a?(String), true, 'First is string')
+assert(r6[1].is_a?(Symbol), true, 'Second is symbol')
+assert(r6[2].is_a?(String), true, 'Third is string')
+
+$context = 'identifier?'
+assert(identifier?('foo'), true, 'String is an identifier')
+assert(identifier?(:foo), false, 'Symbol is not an identifier')
+
+$context = 'expression_array_errors'
+e = expression_array_errors(r1)
+assert(e.nil?, true, 'Empty array is ok')
+e = expression_array_errors(r3)
+assert(e.nil?, true, 'One identifier is ok')
+e = expression_array_errors([ :foo ])
+assert(e.is_a?(Array), true, 'One symbol is an error')
+e = expression_array_errors([ :foo, 'bar' ])
+assert(e.is_a?(Array), true, 'Start with symbol is an error')
+e = expression_array_errors([ 'bar', :foo ])
+assert(e.is_a?(Array), true, 'End with symbol is an error')
+e = expression_array_errors([ 'bar', :foo, 'bar' ])
+assert(e.nil?, true, 'Valid')
+e = expression_array_errors([ 'bar', :foo, 'bar', :sym ])
+assert(e.is_a?(Array), true, 'End with symbol is still an error')
+e = expression_array_errors([ :sym , 'bar', :foo, 'bar' ])
+assert(e.is_a?(Array), true, 'Start with symbol is still an error')
+
+$context = 'check_rules'
+s = YAML.safe_load(%q(
+expressions:
+- name: exp
+  expression: foo
+sets:
+- name: set
+  any:
+  - name: field
+    rules:
+    - pattern
+  edges:
+  - name: field
+    rules:
+    - pattern2
+  nodes:
+  - name: field
+    rules:
+    - pattern3
+))
+r = check_rules(s, 'test')
+assert(r, true, 'Valid rules')
+h = s['expressions']
+assert(h.is_a?(Hash), true, 'Expressions is a hash')
+assert(h.key?('exp'), true, 'Expression name is key')
+assert(h['exp'].is_a?(Array), true, 'Expression value is an array')
+h = s['sets']
+assert(h.is_a?(Hash), true, 'Sets is a hash')
+assert(h.key?('set'), true, 'set is a key')
+h = h['set']
+assert(h.key?(:any), true, 'Any is key')
+assert(h.key?(:nodes), true, 'Nodes is key')
+assert(h.key?(:edges), true, 'Edges is key')
+assert(h[:any].size, 1, 'One name in any')
+assert(h[:nodes].size, 1, 'One name in nodes')
+assert(h[:edges].size, 1, 'One name in edges')
+g = h[:any]
+assert(g.is_a?(Hash), true, 'Set value in any is a hash')
+assert(g.key?('field'), true, 'Field name is key in any')
+assert(g.size, 1, 'Only one field in any')
+g = h[:nodes]
+assert(g.is_a?(Hash), true, 'Set value in nodes is a hash')
+assert(g.key?('field'), true, 'Field name is key in nodes')
+assert(g.size, 1, 'Only one field in nodes')
+g = h[:edges]
+assert(g.is_a?(Hash), true, 'Set value in edges is a hash')
+assert(g.key?('field'), true, 'Field name is key in edges')
+assert(g.size, 1, 'Only one field in edges')
+s = YAML.safe_load(%q(
+expressions:
+- name: exp
+  expression: foo
+- name: exp
+  expression: bar
+))
+r = check_rules(s, 'test')
+assert(r, false, 'duplicate name in expressions')
+s = YAML.safe_load(%q(
+sets:
+- name: set
+- name: set
+))
+r = check_rules(s, 'test')
+assert(r, false, 'duplicate name in sets')
+s = YAML.safe_load(%q(
+sets:
+- name: set
+  any:
+  - name: field
+    rules:
+    - pattern
+  - name: field
+    rules:
+    - pattern2
+))
+r = check_rules(s, 'test')
+assert(r, true, 'Valid combined set field rules')
+a = s.dig('sets', 'set', :any, 'field')
+assert(a.is_a?(Array), true, 'field value is an array')
+assert(a.size, 2, 'Combined set has 2 items.')
+
+$context = 'merge_any'
+s = YAML.safe_load(%q(
+expressions:
+- name: exp
+  expression: foo
+sets:
+- name: set
+  any:
+  - name: field
+    rules:
+    - pattern
+  - name: field2
+    rules:
+    - pattern
+  edges:
+  - name: field
+    rules:
+    - pattern2
+  nodes:
+  - name: field
+    rules:
+    - pattern3
+))
+r = check_rules(s, 'test')
+merge_any(s)
+h = s['sets']
+assert(h.key?('set'), true, 'set is present')
+h = h['set']
+assert(h.key?(:any), false, 'any no longer present')
+assert(h.key?(:nodes), true, 'nodes present')
+assert(h[:nodes].key?('field'), true, 'field still present in nodes')
+assert(h[:nodes]['field'].is_a?(Array), true, 'nodes field is an array')
+assert(h[:nodes]['field'].size, 1, 'nodes field has 1 item')
+assert(h[:nodes].key?('field2'), true, 'field2 present in nodes')
+assert(h[:nodes]['field'].is_a?(Array), true, 'nodes field2 is an array')
+assert(h[:nodes]['field'].size, 1, 'nodes field has 1 item')
+assert(h.key?(:edges), true, 'edges present')
+assert(h[:edges].key?('field'), true, 'field still present in edges')
+assert(h[:edges]['field'].is_a?(Array), true, 'edges field is an array')
+assert(h[:edges]['field'].size, 1, 'edges field has 1 item')
+assert(h[:edges].key?('field2'), true, 'field2 present in edges')
+assert(h[:edges]['field'].is_a?(Array), true, 'edges field2 is an array')
+assert(h[:edges]['field'].size, 1, 'edges field has 1 item')
+
+$context = 'merge_rules'
+s1 = YAML.safe_load(%q(
+expressions:
+- name: exp
+  expression: foo
+sets:
+- name: set
+  any:
+  - name: field1
+    rules:
+    - pattern1
+  - name: field2
+    rules:
+    - pattern2
+))
+s2 = YAML.safe_load(%q(
+expressions:
+- name: exp2
+  expression: foo2
+sets:
+- name: set
+  nodes:
+  - name: field1
+    rules:
+    - pattern3
+))
+s3 = YAML.safe_load(%q(
+sets:
+- name: set
+  edges:
+  - name: field1
+    rules:
+    - pattern4
+  nodes:
+  - name: field2
+    rules:
+    - pattern4
+- name: setx
+  edges:
+  - name: fieldx
+    rules:
+    - patternx
+))
+r1 = check_rules(s1, 'test')
+r2 = check_rules(s2, 'test')
+r3 = check_rules(s3, 'test')
+assert(r1 && r2 && r3, true, 'test rules check ok')
+merge_any(s1)
+merge_any(s2)
+merge_any(s3)
+f = {}
+merge_rules(f, s1)
+merge_rules(f, s2)
+merge_rules(f, s3)
+x = f['expressions']
+assert(x.key?('exp'), true, 'exp is present')
+assert(x.key?('exp2'), true, 'exp2 is present')
+e = f['sets']
+assert(e.key?('set'), true, 'set present')
+assert(e.key?('setx'), true, 'setx present')
+s = e['set'][:edges]
+assert(s.key?('field1'), true, 'field1 present in set')
+r = s['field1']
+assert(r.size, 1, '1 pattern for field1')
+assert(r.first.match?('pattern4'), true, 'pattern4 remains')
+assert(s.key?('field2'), true, 'field2 present in set')
+r = s['field2']
+assert(r.size, 1, '1 pattern for field2')
+assert(r.first.match?('pattern2'), true, 'pattern2 remains')
+n = e['set'][:nodes]
+assert(n.key?('field1'), true, 'field1 present in nodes')
+assert(n.key?('field2'), true, 'field2 present in nodes')
+r = n['field1']
+assert(r.size, 1, '1 pattern for field1 in nodes')
+assert(r.first.match?('pattern3'), true, 'pattern3 remains')
+r = n['field2']
+assert(r.size, 1, '1 pattern for field2 in nodes')
+assert(r.first.match?('pattern4'), true, 'pattern4 remains')
+
+$context = 'match_item'
+item = {
+  'field1' => 'foo',
+  'field2' => 'bar',
+  'num' => 1,
+  'mixed' => [ 'baz', 3 ]
+}
+r = {
+  'field1' => [ Regexp.new('fo') ]
+}
+assert(match_item(item, r), true, 'simple match')
+r = {
+  'field1' => [ Regexp.new('bar') ],
+  'field3' => [ Regexp.new('fo') ],
+  'num' => [ Regexp.new('bar') ]
+}
+assert(match_item(item, r), false, 'no match')
+r = {
+  'mixed' => [ Regexp.new('baz') ]
+}
+assert(match_item(item, r), true, 'mixed match')
+
+exit $unit_test

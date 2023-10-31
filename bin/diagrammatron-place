@@ -140,7 +140,7 @@ def area_order(bbs)
   end
   order.sort! do |a, b|
     d = area_compare(a[1], b[1])
-    (d != 0) ? d : (a[0] <=> b[0])
+    d.zero? ? (a[0] <=> b[0]) : d
   end
   order
 end

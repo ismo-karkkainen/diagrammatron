@@ -1,0 +1,37 @@
+####COMMAND No selected
+####CODE 2
+####OUT
+####ERR
+Must select an expression or subset to use for output.
+####COMMAND Selected not in rules
+####CODE 2
+####OUT
+####ERR
+Selected undefined is not expression or subset name.
+####COMMAND Rule file load failure
+####CODE 5
+####OUT
+####ERR
+Could not load missing
+####COMMAND No edges or nodes
+####CODE 0
+####OUT
+---
+nodes: []
+edges: []
+####ERR
+####COMMAND Graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: a
+  field: matching
+- label: c
+  field: also matching
+edges:
+- between:
+  - a
+  - c
+  afield: similar
+####ERR

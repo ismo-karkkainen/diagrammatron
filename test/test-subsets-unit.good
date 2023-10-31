@@ -1,0 +1,90 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: split_expression_string: Empty string, empty array
+ok: split_expression_string: Spaces string, empty array
+ok: split_expression_string: One
+ok: split_expression_string: Two
+ok: split_expression_string: Three
+ok: split_expression_string: Item 0 is string
+ok: split_expression_string: Item 1 is string
+ok: split_expression_string: Item 2 is string
+ok: split_expression_string: Three
+ok: split_expression_string: First is string
+ok: split_expression_string: Second is symbol
+ok: split_expression_string: Third is string
+ok: identifier?: String is an identifier
+ok: identifier?: Symbol is not an identifier
+ok: expression_array_errors: Empty array is ok
+ok: expression_array_errors: One identifier is ok
+ok: expression_array_errors: One symbol is an error
+ok: expression_array_errors: Start with symbol is an error
+ok: expression_array_errors: End with symbol is an error
+ok: expression_array_errors: Valid
+ok: expression_array_errors: End with symbol is still an error
+ok: expression_array_errors: Start with symbol is still an error
+ok: check_rules: Valid rules
+ok: check_rules: Expressions is a hash
+ok: check_rules: Expression name is key
+ok: check_rules: Expression value is an array
+ok: check_rules: Sets is a hash
+ok: check_rules: set is a key
+ok: check_rules: Any is key
+ok: check_rules: Nodes is key
+ok: check_rules: Edges is key
+ok: check_rules: One name in any
+ok: check_rules: One name in nodes
+ok: check_rules: One name in edges
+ok: check_rules: Set value in any is a hash
+ok: check_rules: Field name is key in any
+ok: check_rules: Only one field in any
+ok: check_rules: Set value in nodes is a hash
+ok: check_rules: Field name is key in nodes
+ok: check_rules: Only one field in nodes
+ok: check_rules: Set value in edges is a hash
+ok: check_rules: Field name is key in edges
+ok: check_rules: Only one field in edges
+ok: check_rules: duplicate name in expressions
+ok: check_rules: duplicate name in sets
+ok: check_rules: Valid combined set field rules
+ok: check_rules: field value is an array
+ok: check_rules: Combined set has 2 items.
+ok: merge_any: set is present
+ok: merge_any: any no longer present
+ok: merge_any: nodes present
+ok: merge_any: field still present in nodes
+ok: merge_any: nodes field is an array
+ok: merge_any: nodes field has 1 item
+ok: merge_any: field2 present in nodes
+ok: merge_any: nodes field2 is an array
+ok: merge_any: nodes field has 1 item
+ok: merge_any: edges present
+ok: merge_any: field still present in edges
+ok: merge_any: edges field is an array
+ok: merge_any: edges field has 1 item
+ok: merge_any: field2 present in edges
+ok: merge_any: edges field2 is an array
+ok: merge_any: edges field has 1 item
+ok: merge_rules: test rules check ok
+ok: merge_rules: exp is present
+ok: merge_rules: exp2 is present
+ok: merge_rules: set present
+ok: merge_rules: setx present
+ok: merge_rules: field1 present in set
+ok: merge_rules: 1 pattern for field1
+ok: merge_rules: pattern4 remains
+ok: merge_rules: field2 present in set
+ok: merge_rules: 1 pattern for field2
+ok: merge_rules: pattern2 remains
+ok: merge_rules: field1 present in nodes
+ok: merge_rules: field2 present in nodes
+ok: merge_rules: 1 pattern for field1 in nodes
+ok: merge_rules: pattern3 remains
+ok: merge_rules: 1 pattern for field2 in nodes
+ok: merge_rules: pattern4 remains
+ok: match_item: simple match
+ok: match_item: no match
+ok: match_item: mixed match
+####ERR
+test duplicate expression name: exp
+test duplicate set name: set

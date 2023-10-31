@@ -7,57 +7,23 @@ nodes:
   xo: 0
   yo: 0
   sid: 0
+edges: []
 ####ERR
 Note, unconnected labeled nodes: one
 ####COMMAND Node missing a label
-####CODE 0
+####CODE 2
 ####OUT
----
-nodes:
-- label: unused
-  xo: 0
-  yo: 0
-  sid: 0
-- missing: label
-  xo: 0
-  yo: 1
-  sid: 0
 ####ERR
-Note, unconnected labeled nodes: unused
-Note, unlabeled nodes: 1
+object at `/nodes/1` is missing required properties: label
 ####COMMAND Missing node and too few/many end-points
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Edge 1 does not have two labels in 'between'
-Edge 3 does not have two labels in 'between'
+array size at `/edges/0/between` is less than: 2
+array size at `/edges/2/between` is greater than: 2
 ####COMMAND Various edges
-####CODE 0
+####CODE 2
 ####OUT
----
-nodes:
-- label: one
-  xo: 0
-  yo: 0
-  sid: 0
-- label: unconnected
-  xo: 0
-  yo: 1
-  sid: 0
-- label: two
-  xo: 0
-  yo: 2
-  sid: 0
-edges:
-- between:
-  - one
-  - one
-- ignored: betweenless
-- between: []
-- between:
-  - one
-  - two
 ####ERR
-Note, unconnected labeled nodes: unconnected
-Note, edges from node to itself: 0
-Note, edges without end-points: 1 2
+object at `/edges/1` is missing required properties: between
+array size at `/edges/2/between` is less than: 2

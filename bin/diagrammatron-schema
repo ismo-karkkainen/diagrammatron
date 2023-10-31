@@ -1,0 +1,107 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Copyright © 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require_relative '../lib/common'
+require 'optparse'
+require 'yaml'
+require 'json'
+
+def convert(result, format)
+  case format
+  when :json then JSON.generate(result)
+  when :yaml then YAML.dump(result)
+  when :prettyjson then JSON.pretty_generate(result)
+  end
+end
+
+def main
+  output = nil
+  format = :json
+  package = :bare
+  ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 20
+    opts.banner = 'Usage: diagrammatron-schema [options] schema-name ...'
+    opts.separator ''
+    opts.separator 'Options:'
+    opts.on('-f', '--format FMT', 'Output schema format (json, yaml, pretty).') do |fmt|
+      case fmt.upcase
+      when 'JSON' then format = :json
+      when 'YAML' then format = :yaml
+      when 'PRETTY' then format = :prettyjson
+      else
+        format = fmt
+      end
+    end
+    opts.on('-p', '--package PKG', 'Wrap schema(s) in given way.') do |pkg|
+      case pkg.upcase
+      when 'OBJECT' then package = :object
+      when 'ARRAY' then package = :array
+      when 'BARE' then package = :bare
+      else
+        package = pkg
+      end
+    end
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
+      output = filename
+    end
+    opts.on('-l', '--list', 'List available schemas and exit.') do
+      $stdout.puts list_schemas.join("\n")
+      exit 0
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts %(#{opts}
+Outputs the given schema files.
+Formats are: JSON, YAML, pretty for prettified JSON.
+Packages are:
+  object: Output schemas as an object with name to schema mapping.
+  array: Output schemas as an array in the order given on the command-line
+  bare: Output schemas in the specified order as they are. The default.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  aargh("Unknown format: #{format}", 1) unless format.is_a? Symbol
+  case package
+  when :bare, :array then out = []
+  when :object then out = {}
+  else
+    return aargh("Unknown package: #{package}", 1) unless package.is_a? Symbol
+  end
+
+  ARGV.each do |name|
+    s = load_schema(name)
+    if out.is_a? Array
+      out.push(s)
+    else
+      out[name] = s
+    end
+  rescue Errno::ENOENT
+    aargh "No such schema: #{name}", 2
+  rescue StandardError => e
+    aargh "#{e}\nInternal error: #{name}", 3
+  end
+
+  if output.nil?
+    fp = $stdout
+  else
+    fp = File.new(output, 'w')
+  end
+  if package == :bare
+    out.each do |item|
+      fp.puts(convert(item, format))
+    end
+  else
+    fp.puts(convert(out, format))
+  end
+  fp.close
+  0
+end
+
+exit(main) if (defined? $unit_test).nil?

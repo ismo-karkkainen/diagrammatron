@@ -2,7 +2,7 @@
 ####CODE 2
 ####OUT
 ####ERR
-Input is not a mapping.
+invalid is not a simple mapping.
 ####COMMAND Valid root but missing fields
 ####CODE 4
 ####OUT

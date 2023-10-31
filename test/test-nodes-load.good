@@ -12,10 +12,10 @@
 ####ERR
 Could not load tmp
 ####COMMAND Bad piped input
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Error processing input.
+value at root is not an object
 ####COMMAND Unrecognized algorithm
 ####CODE 2
 ####OUT

@@ -1,0 +1,71 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: Item: Node got copied
+ok: Item: One id in node
+ok: Item: Edge got copied
+ok: Item: Edge and end-point ids in edge
+ok: Item: Edge id is greater than previous
+ok: Item: Start node id copied
+ok: Item: End node id copied
+ok: Item: Edge and end-point ids in broken edge
+ok: Item: Edge id still greater than previous
+ok: Item: Broken start node id copied
+ok: Item: End node id invalid
+ok: work_copy: Work copy has nodes
+ok: work_copy: Work copy has edges
+ok: work_copy: Additional property not present
+ok: work_copy: Same number of edges
+ok: work_copy: Same edges item 0
+ok: work_copy: edges item 0 id unique
+ok: work_copy: Same edges item 1
+ok: work_copy: edges item 1 id unique
+ok: work_copy: Same number of nodes
+ok: work_copy: Same nodes item 0
+ok: work_copy: nodes item 0 id unique
+ok: work_copy: Same nodes item 1
+ok: work_copy: nodes item 1 id unique
+ok: work_copy: Same nodes item 2
+ok: work_copy: nodes item 2 id unique
+ok: work_copy: Edge has 3 ids
+ok: work_copy: Edge node id 1 is a node id
+ok: work_copy: Edge node id 2 is a node id
+ok: work_copy: Edge has 3 ids
+ok: work_copy: Edge node id 1 is a node id
+ok: work_copy: Edge node id 2 is a node id
+ok: prepare_output: Additional property remains
+ok: prepare_output: nodes is present
+ok: prepare_output: edges is present
+ok: prepare_output: 2 nodes remain
+ok: prepare_output: a node remains
+ok: prepare_output: b node remains
+ok: prepare_output: 1 edge remains
+ok: prepare_output: edge from a
+ok: prepare_output: edge to b
+ok: gather_set: set size is 1
+ok: gather_set: a node is in set
+ok: gather_set: set size is 4
+ok: gather_set: a node is in set
+ok: gather_set: b node is in set
+ok: gather_set: ab edge is in set
+ok: gather_set: ac edge is in set
+ok: gather_set: set size is 4
+ok: gather_set: a node is in set
+ok: gather_set: c node is in set
+ok: gather_set: ab edge is in set
+ok: gather_set: ac edge is in set
+ok: gather_set: undefined set detected
+ok: gather: set a is in cache
+ok: gather: same object is returned
+ok: gather: loop detected
+ok: gather: undefined
+ok: gather: bad operator
+ok: gather: expression to set
+ok: gather: empty
+ok: gather: duplicate
+####ERR
+Undefined set: undefined
+Loop in expressions for top: bottom
+top
+Undefined expression: undef
+Unsupported operator: other

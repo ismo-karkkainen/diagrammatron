@@ -99,7 +99,7 @@ class Styles
     @d = base_styles(base_styles({}, template_styles, 'diagram'), diagram_styles, 'diagram')
   end
 
-  def fill(mapping, type_name, item)
+  def fill(mapping, _type_name, item)
     styles = item.fetch('style', [ 'default' ])
     styles = [ styles ] unless styles.is_a?(Array)
     s = {}
@@ -112,7 +112,7 @@ class Styles
     end
     s.merge!(mapping['default']) unless found # Merge default at least.
     # Keep values specified explicitly.
-    item.merge!(s) { |key, existing, from_template| existing || from_template }
+    item.merge!(s) { |_key, existing, from_template| existing || from_template }
   end
 
   def apply_node_styles(node)

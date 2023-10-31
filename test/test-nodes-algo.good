@@ -29,6 +29,7 @@ nodes:
   xo: 0
   yo: 0
   sid: 1
+edges: []
 ####ERR
 Note, unconnected labeled nodes: one two
 ####COMMAND Three node split graph

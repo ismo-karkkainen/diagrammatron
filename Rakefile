@@ -20,7 +20,7 @@ task install: [:gem] do
 end
 
 desc 'Test.'
-task test: %i[testcommon testnodes testedges testplace testprune testrender testtemplate testget] do
+task test: %i[testcommon testsubset testsubsets testnodes testedges testplace testprune testrender testtemplate testget] do
 end
 
 desc 'Test nodes.'
@@ -61,6 +61,16 @@ end
 desc 'Test common library.'
 task :testcommon do
   sh './runtest.sh common'
+end
+
+desc 'Test subsets library.'
+task :testsubsets do
+  sh './runtest.sh subsets'
+end
+
+desc 'Test subset.'
+task :testsubset do
+  sh './runtest.sh subset'
 end
 
 desc 'Lint using Rubocop'
