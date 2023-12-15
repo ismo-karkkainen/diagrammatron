@@ -86,8 +86,6 @@ nodes:
     yo: 0
 edges:
   - between: [ one, one ]
-  - ignored: betweenless
-  - between: []
   - between: [ one, two ]
 EOF
 out $?

@@ -1,0 +1,45 @@
+type: object
+properties:
+  edges:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      $ref: "#/$defs/Edge"
+  nodes:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      $ref: "#/$defs/Node"
+additionalProperties: true
+$defs:
+  Node:
+    type: object
+    required:
+    - label
+    - sid
+    - xo
+    - yo
+    properties:
+      label:
+        type: string
+      sid:
+        type: integer
+      xo:
+        type: integer
+      yo:
+        type: integer
+    additionalProperties: true
+  Edge:
+    type: object
+    required:
+    - between
+    properties:
+      between:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 2
+    additionalProperties: true

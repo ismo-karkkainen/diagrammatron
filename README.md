@@ -6,6 +6,7 @@ This is a small collection to programs to do the following:
 - Place the nodes of a graph/diagram onto a plane.
 - Place edges between the nodes.
 - Place separate sub-diagrams so that they do not overlap.
+- Select a subset of the diagram.
 - Turn the resulting graph into a graphics file for viewing.
 - A helper script to make it easier to construct templates for conversion.
 

@@ -1,39 +1,29 @@
 ####COMMAND One node graph without sid
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Node without sid: one
+object at `/nodes/0` is missing required properties: sid, xo, yo
 ####COMMAND One node graph without coordinates
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Node without xo or yo: one
+object at `/nodes/0` is missing required properties: xo, yo
 ####COMMAND One node graph without yo
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Node without xo or yo: one
+object at `/nodes/0` is missing required properties: yo
 ####COMMAND Node missing a label
-####CODE 0
+####CODE 2
 ####OUT
----
-nodes:
-- label: unused
-  sid: 0
-  xo: 0
-  yo: 0
-- sid: 0
-  xo: 0
-  yo: 0
 ####ERR
-Note, unconnected labeled nodes: unused
-Note, unlabeled nodes: 1
+object at `/nodes/1` is missing required properties: label
 ####COMMAND Missing node and too few/many end-points
-####CODE 3
+####CODE 2
 ####OUT
 ####ERR
-Edge 1 does not have two labels in 'between'
-Edge 3 does not have two labels in 'between'
+array size at `/edges/0/between` is less than: 2
+array size at `/edges/2/between` is greater than: 2
 ####COMMAND Various edges
 ####CODE 0
 ####OUT
@@ -55,8 +45,6 @@ edges:
 - between:
   - one
   - one
-- ignored: betweenless
-- between: []
 - between:
   - one
   - two
@@ -69,4 +57,3 @@ edges:
 ####ERR
 Note, unconnected labeled nodes: unconnected
 Note, edges from node to itself: 0
-Note, edges without end-points: 1 2

@@ -13,47 +13,27 @@ require 'pathname'
 
 def work_copy(src, quiet)
   work = { edges: {}, nodes: [] }
-  # Expected nodes, edges. Other pass-through.
   label2idx = {}
   errors = false
   edge_nodes = Set.new
-  edges = src.fetch('edges', [])
-  unedges = []
+  edges = src['edges']
   selfedges = []
   edges.each_index do |k|
     edge = edges[k]
-    labels = edge.fetch('between', [])
-    if labels.nil? || labels.empty?
-      unedges.push(k)
-    elsif labels.size == 2
-      if labels.first == labels.last
-        selfedges.push(k)
-      else
-        edge_nodes.add labels.first
-        edge_nodes.add labels.last
-        work[:edges][k] = { idx: k, between: [ labels[0], labels[1] ] }
-      end
+    labels = edge['between']
+    if labels.first == labels.last
+      selfedges.push(k)
     else
-      aargh "Edge #{k + 1} does not have two labels in 'between'"
-      errors = true
+      edge_nodes.add labels.first
+      edge_nodes.add labels.last
+      work[:edges][k] = { idx: k, between: [ labels[0], labels[1] ] }
     end
   end
   labeled_nodes = Set.new
-  unlabeled = []
   nodes = src.fetch('nodes', [])
   subsets = {}
   nodes.each_index do |k|
     node = nodes[k]
-    unless node.key? 'sid'
-      aargh "Node without sid: #{node.fetch('label', k + 1)}"
-      errors = true
-      next
-    end
-    unless node.key?('xo') && node.key?('yo')
-      aargh "Node without xo or yo: #{node.fetch('label', k + 1)}"
-      errors = true
-      next
-    end
     sid = node['sid']
     subsets[sid] = [] unless subsets.key? sid
     subsets[sid].push(k)
@@ -63,10 +43,6 @@ def work_copy(src, quiet)
       xo: node['xo'] * 2, # Make room for edge coordinates.
       yo: node['yo'] * 2
     })
-    unless node.key? 'label'
-      unlabeled.push k
-      next
-    end
     label = node['label']
     if label2idx.key?(label) && edge_nodes.member?(label)
       aargh "Edge-referred label used twice: #{label}"
@@ -83,9 +59,7 @@ def work_copy(src, quiet)
   return nil if errors
   unused = labeled_nodes - edge_nodes
   [ [ unused.to_a, 'unconnected labeled nodes' ],
-    [ unlabeled, 'unlabeled nodes' ],
-    [ selfedges, 'edges from node to itself' ],
-    [ unedges, 'edges without end-points' ]
+    [ selfedges, 'edges from node to itself' ]
   ].each do |x|
     next if quiet || x.first.empty?
     aargh("Note, #{x.last}: #{x.first.join(' ')}")
@@ -737,6 +711,7 @@ end
 def main
   input = nil
   output = nil
+  input_schema = 'edges'
   quiet = false
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -757,19 +732,25 @@ def main
       $stdout.puts %(#{opts}
 
 Input YAML file is expected to be the output of diagrammatron-nodes.
+
+Input YAML file schema is returned by:
+diagrammatron-schema #{input_schema}
+
+There can be other fields present but they are ignored.
 )
       exit 0
     end
   end
   parser.parse! ARGV
 
-  doc = load_source(input)
+  doc = load_verified(input, input_schema)
   return 2 if doc.nil?
 
   begin
     work = work_copy(doc, quiet)
     return 3 if work.nil?
-  rescue StandardError
+  rescue StandardError => e
+    $stderr.puts e
     return aargh('Error processing input.', 3)
   end
 
