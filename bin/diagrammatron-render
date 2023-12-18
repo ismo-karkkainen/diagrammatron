@@ -61,8 +61,7 @@ def separate_coordinates(doc)
     push_coords(xcoords, ycoords, ckd2count, node.clone, 1, 1, true)
   end
   doc['edges'].each do |edge|
-    path = edge.fetch('path', nil)
-    next if path.nil?
+    path = edge['path']
     xdirection, ydirection = end_directions(path[0], path[1])
     push_coords(xcoords, ycoords, ckd2count, path[0], xdirection, ydirection)
     (1...(path.size - 1)).each do |k|
@@ -169,7 +168,7 @@ def estimate_sizes(doc, ckd2count)
   $render = SizeEstimation.new(ckd2count, doc)
   doc['nodes'].each do |node|
     $render.node = node
-    label = node.fetch('label', 'unnamed')
+    label = node['label']
     style = node.fetch('style', 'default')
     code = node.fetch('size_estimator',
       %(raise NotImplementedError, "No size estimator for style: #{style}"))
@@ -187,7 +186,7 @@ end
 def maxima(doc)
   xmax = Hash.new(0)
   ymax = Hash.new(0)
-  doc.fetch('nodes', []).each do |node|
+  doc['nodes'].each do |node|
     xmax[node['xo']] = [ node['w'], xmax[node['xo']] ].max
     ymax[node['yo']] = [ node['h'], ymax[node['yo']] ].max
   end
@@ -195,7 +194,7 @@ def maxima(doc)
 end
 
 def apply_maxima(doc, xmax, ymax)
-  doc.fetch('nodes', []).each do |node|
+  doc['nodes'].each do |node|
     node['w'] = xmax[node['xo']]
     node['h'] = ymax[node['yo']]
   end
@@ -258,13 +257,12 @@ class Render
   def dimensions
     w = 0
     h = 0
-    @doc.fetch('nodes', []).each do |node|
+    @doc['nodes'].each do |node|
       w = [ w, node['xo'] + node['w'] ].max
       h = [ h, node['yo'] + node['h'] ].max
     end
-    @doc.fetch('edges', []).each do |edge|
-      path = edge.fetch('path', nil)
-      next if path.nil?
+    @doc['edges'].each do |edge|
+      path = edge['path']
       path.each do |p|
         w = [ w, p['xo'] ].max
         h = [ h, p['yo'] ].max
@@ -305,6 +303,7 @@ end
 def main
   template = nil
   input = nil
+  input_schema = 'render'
   output = nil
   styles = nil
   parser = OptionParser.new do |opts|
@@ -324,7 +323,10 @@ def main
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts %(#{opts}
-Input YAML file is expected to be the output of diagrammatron-place.
+Input YAML file schema is returned by:
+diagrammatron-schema #{input_schema}
+
+There can be other fields present as needed by the template.
 
 Output is the file produced by the erb-template.
 )
@@ -347,15 +349,15 @@ Output is the file produced by the erb-template.
     end
   end
 
-  doc = load_source(input)
+  doc = load_verified(input, input_schema)
   return 2 if doc.nil?
 
   styles = Styles.new(template.fetch('styles', {}), doc.fetch('styles', {}))
-  doc.fetch('nodes', []).each do |node|
+  doc['nodes'].each do |node|
     styles.apply_node_styles(node)
-    node['text'] = node.fetch('text', node.fetch('label', '')).split("\n")
+    node['text'] = node.fetch('text', node['label']).split("\n")
   end
-  doc.fetch('edges', []).each { |edge| styles.apply_edge_styles(edge) }
+  doc['edges'].each { |edge| styles.apply_edge_styles(edge) }
   doc['diagram'] = {} unless doc.key? 'diagram'
   styles.apply_diagram_styles(doc['diagram'])
 
@@ -376,16 +378,16 @@ Output is the file produced by the erb-template.
   remap_coordinates(xcoords, xmax, x2min, doc.dig('diagram', 'edge_gap'))
   remap_coordinates(ycoords, ymax, y2min, doc.dig('diagram', 'edge_gap'))
 
-  doc['nodes'] = reverse_depth_sort(doc.fetch('nodes', []))
-  doc['edges'] = reverse_depth_sort(doc.fetch('edges', []))
-  all = doc.fetch('nodes', []).map do |a|
+  doc['nodes'] = reverse_depth_sort(doc['nodes'])
+  doc['edges'] = reverse_depth_sort(doc['edges'])
+  all = doc['nodes'].map do |a|
     {
       'kind' => 'node',
       'depth' => a.fetch('depth', 0),
       'item' => a
     }
   end
-  all.concat(doc.fetch('edges', []).map do |a|
+  all.concat(doc['edges'].map do |a|
     {
       'kind' => 'edge',
       'depth' => a.fetch('depth', 0),

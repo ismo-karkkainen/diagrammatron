@@ -1,18 +1,17 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
-require 'pathname'
 
-def info(msg, return_value = nil)
+
+def info(msg)
   $stderr.puts(msg) unless $QUIET
-  return_value
 end
 
 BoundingBox = Struct.new(:xmin, :ymin, :xmax, :ymax) do
@@ -91,22 +90,19 @@ end
 
 def work_copy(src)
   work = { edges: {}, nodes: {} }
-  # Expected nodes, edges. Other pass-through.
-  nodes = src.fetch('nodes', [])
+  nodes = src['nodes']
   nodes.each_index do |k|
     node = nodes[k]
-    sid = node.fetch('sid', nil)
-    xo = node.fetch('xo', nil)
-    yo = node.fetch('yo', nil)
-    next if sid.nil? || xo.nil? || yo.nil?
+    sid = node['sid']
+    xo = node['xo']
+    yo = node['yo']
     work[:nodes][sid] = work[:nodes].fetch(sid, []).push(Node.new(k, sid, xo, yo))
   end
-  edges = src.fetch('edges', [])
+  edges = src['edges']
   edges.each_index do |k|
     edge = edges[k]
-    path = edge.fetch('path', nil)
-    sid = edge.fetch('sid', nil)
-    next if path.nil? || sid.nil?
+    path = edge['path']
+    sid = edge['sid']
     work[:edges][sid] = work[:edges].fetch(sid, []).push(Edge.new(k, sid, path))
   end
   work[:subsets] = work[:nodes].keys.to_set.merge(work[:edges].keys.to_set).to_a
@@ -362,6 +358,7 @@ $QUIET = false
 def main
   input = nil
   output = nil
+  input_schema = 'edges'
   algo = 'tallwide'
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -389,10 +386,13 @@ def main
       $stdout.puts %(
 Algorithm names are: #{$algorithms.keys.sort.join(' ')}
 
-Input YAML file is expected to be the output of diagrammatron-edges.
+Input and output YAML file schema is returned by:
+diagrammatron-schema #{input_schema}
 
-Output is the input file with 'xo' and 'yo' modified so that the sub-diagrams
-do not overlap.
+There can be other fields present but they are ignored and retained.
+
+Output is the input file with 'xo', 'yo', and 'path' modified to remove
+overlap between sub-diagrams and edges.
 )
       exit 0
     end
@@ -415,7 +415,7 @@ do not overlap.
   end
   algo = $algorithms[algo]
 
-  doc = load_source(input)
+  doc = load_verified(input, input_schema)
   return 2 if doc.nil?
 
   begin

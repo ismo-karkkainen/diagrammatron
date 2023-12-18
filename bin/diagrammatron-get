@@ -1,12 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
 require 'optparse'
-require 'pathname'
 
 
 def template(name = nil)
@@ -28,8 +27,8 @@ def main
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts %(#{opts}
-This is used to easily access template files included in the gem without need
-to clone the original repository.
+This is used to easily access template files included in the gem without
+the need to clone the original repository.
 
 Without arguments, lists all templates, template root, and content files
 included in the gem.

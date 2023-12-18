@@ -1,0 +1,111 @@
+type: object
+properties:
+  diagram:
+    type: object
+    default: {}
+    properties:
+      style:
+        $ref: "#/$defs/Style"
+        default: 'default'
+  edges:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      $ref: "#/$defs/Edge"
+  nodes:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      $ref: "#/$defs/Node"
+  styles:
+    type: object
+    properties:
+      node:
+        type: object
+        properties:
+          default:
+            type: object
+            default: {}
+        additionalProperties: true
+      edge:
+        type: object
+        default: {}
+        properties:
+          default:
+            type: object
+            default: {}
+        additionalProperties: true
+      diagram:
+        type: object
+        default: {}
+        properties:
+          default:
+            type: object
+            default: {}
+        additionalProperties: true
+    additionalProperties: true
+additionalProperties: true
+$defs:
+  Node:
+    type: object
+    required:
+    - label
+    - sid
+    - xo
+    - yo
+    properties:
+      label:
+        type: string
+      sid:
+        type: integer
+      xo:
+        type: integer
+      yo:
+        type: integer
+      style:
+        $ref: "#/$defs/Style"
+        default: 'default'
+    additionalProperties: true
+  Edge:
+    type: object
+    required:
+    - between
+    - path
+    - sid
+    properties:
+      between:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 2
+      path:
+        type: array
+        items:
+          $ref: "#/$defs/Position"
+        minItems: 2
+      sid:
+        type: integer
+      style:
+        $ref: "#/$defs/Style"
+        default: 'default'
+    additionalProperties: true
+  Position:
+    type: object
+    required:
+    - xo
+    - yo
+    properties:
+      xo:
+        type: number
+      yo:
+        type: number
+  Style:
+    oneOf:
+    - type: string
+    - type: array
+      items:
+        type: string
+

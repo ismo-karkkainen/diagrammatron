@@ -30,7 +30,7 @@ def work_copy(src, quiet)
     end
   end
   labeled_nodes = Set.new
-  nodes = src.fetch('nodes', [])
+  nodes = src['nodes']
   subsets = {}
   nodes.each_index do |k|
     node = nodes[k]
@@ -712,6 +712,7 @@ def main
   input = nil
   output = nil
   input_schema = 'edges'
+  output_schema = 'place'
   quiet = false
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -736,7 +737,10 @@ Input YAML file is expected to be the output of diagrammatron-nodes.
 Input YAML file schema is returned by:
 diagrammatron-schema #{input_schema}
 
-There can be other fields present but they are ignored.
+Output YAML file schema is returned by:
+diagrammatron-schema #{output_schema}
+
+There can be other fields present but they are ignored and retained.
 )
       exit 0
     end
@@ -750,7 +754,6 @@ There can be other fields present but they are ignored.
     work = work_copy(doc, quiet)
     return 3 if work.nil?
   rescue StandardError => e
-    $stderr.puts e
     return aargh('Error processing input.', 3)
   end
 

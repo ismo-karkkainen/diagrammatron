@@ -1,14 +1,13 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
 require 'set'
-require 'pathname'
 
 
 def prune_array(original, matching, keep)
@@ -26,7 +25,12 @@ def prune(doc, patterns, keep)
   nodes = doc.fetch('nodes', [])
   matching = Array.new(nodes.size, false)
   nodes.each_index do |k|
-    label = nodes[k].fetch('label', '')
+    label = nodes[k].fetch('label', nil)
+    if label.nil?
+      # Schemas require 'label' to be present.
+      matching[k] = !keep
+      next
+    end
     patterns.each do |p|
       next unless p.match(label)
       matching[k] = true
@@ -40,10 +44,12 @@ def prune(doc, patterns, keep)
   edges.each_index do |k|
     between = edges[k].fetch('between', [])
     if between.size != 2
-      matching[k] = keep # Removing these suppresses later warnings.
+      matching[k] = !keep # Schemas require between size to be 2.
     elsif keep
+      # Both ends matched reversed remove rule, keep the edge.
       matching[k] = (labels.member?(between[0]) && labels.member?(between[1]))
     else
+      # If either end matched remove rule, remove the edge.
       matching[k] = (labels.member?(between[0]) || labels.member?(between[1]))
     end
   end

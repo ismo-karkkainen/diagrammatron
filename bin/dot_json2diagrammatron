@@ -1,14 +1,12 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021, 2022 Ismo Kärkkäinen
+# Copyright © 2021-2023 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
 require 'optparse'
 require 'yaml'
-require 'json'
-require 'pathname'
 
 
 def convert(src)
@@ -63,10 +61,9 @@ def convert(src)
   { 'edges' => edges, 'nodes' => nodes }
 end
 
-$INPUT = nil
-$OUTPUT = nil
-
 def main
+  input = nil
+  output = nil
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
@@ -74,10 +71,10 @@ def main
     opts.separator ''
     opts.separator 'Options:'
     opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
-      $INPUT = filename
+      input = filename
     end
     opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
-      $OUTPUT = filename
+      output = filename
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
@@ -91,7 +88,7 @@ of "between" with the "name" as the identifier. Compound objects are ignored.
   end
   parser.parse! ARGV
 
-  doc = load_source
+  doc = load_source(input)
   exit(2) if doc.nil?
 
   begin
@@ -101,19 +98,7 @@ of "between" with the "name" as the identifier. Compound objects are ignored.
   end
   exit(3) if out.nil?
 
-  begin
-    if $OUTPUT.nil?
-      $stdout.puts YAML.dump(out)
-    else
-      fp = Pathname.new $OUTPUT
-      fp.open('w') do |f|
-        f.puts YAML.dump(out)
-      end
-    end
-  rescue StandardError => e
-    aargh("#{e}\nFailed to write output: #{$OUTPUT}")
-    exit 4
-  end
+  dump_result(output, YAML.dump(out, line_width: 1_000_000), 4)
 end
 
 main if (defined? $unit_test).nil?
