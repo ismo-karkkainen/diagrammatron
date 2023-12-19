@@ -27,6 +27,5 @@ programs that each perform one stage.
   s.license     = 'UPL-1.0'
   s.required_ruby_version = '>= 3.0.0'
   s.add_runtime_dependency 'json_schemer', '~> 2.0', '>= 2.0.0'
-  s.add_development_dependency 'rubocop', '~> 1.57', '>= 1.57.1'
   s.metadata = { 'rubygems_mfa_required' => 'true' }
 end

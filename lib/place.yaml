@@ -47,7 +47,7 @@ $defs:
       path:
         type: array
         items:
-          $ref: "#/defs/Position"
+          $ref: "#/$defs/Position"
         minItems: 2
       sid:
         type: integer

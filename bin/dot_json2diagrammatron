@@ -6,7 +6,6 @@
 
 require_relative '../lib/common'
 require 'optparse'
-require 'yaml'
 
 
 def convert(src)
@@ -64,6 +63,7 @@ end
 def main
   input = nil
   output = nil
+  output_schema = 'nodes'
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
     opts.summary_width = 20
@@ -80,8 +80,12 @@ def main
       $stdout.puts opts
       $stdout.puts %(
 Output is a YAML file with "name" used as "label" and "shape" used as is
-for nodes. For edges "tail" and "head" are used as the first and second element
-of "between" with the "name" as the identifier. Compound objects are ignored.
+for nodes. For edges "tail" and "head" are used as the first and second
+element of "between" with the "name" as the identifier. Compound objects
+are ignored.
+
+Output YAML file schema is returned by:
+diagrammatron-schema #{output_schema}
 )
       exit 0
     end
@@ -98,7 +102,7 @@ of "between" with the "name" as the identifier. Compound objects are ignored.
   end
   exit(3) if out.nil?
 
-  dump_result(output, YAML.dump(out, line_width: 1_000_000), 4)
+  save_verified(output, pout, 4, output_schema)
 end
 
 main if (defined? $unit_test).nil?

@@ -4,6 +4,7 @@
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require 'json_schemer'
+require 'yaml'
 require 'set'
 
 
@@ -37,13 +38,17 @@ def load_schema(schema_name)
   YAML.safe_load_file(File.join(File.dirname(__FILE__), "#{schema_name}.yaml"))
 end
 
+def make_schemer(schema, reading)
+  JSONSchemer.schema(JSON.generate(schema),
+    meta_schema: 'https://json-schema.org/draft/2020-12/schema',
+    insert_property_defaults: reading)
+end
+
 def load_verified(input, schema_name)
   src = load_source(input)
   unless src.nil?
     s = load_schema(schema_name)
-    schemer = JSONSchemer.schema(JSON.generate(s),
-      meta_schema: 'https://json-schema.org/draft/2020-12/schema',
-      insert_property_defaults: true)
+    schemer = make_schemer(s, true)
     errs = schemer.validate(src).to_a
     unless errs.empty?
       aargh (errs.map { |e| e['error'] }).join("\n")
@@ -69,4 +74,15 @@ def dump_result(output, doc, error_return)
   0
 rescue StandardError => e
   aargh([ e, "Failed to write output: #{output || 'stdout'}" ], error_return)
+end
+
+def save_verified(output, doc, error_return, schema_name)
+  s = load_schema(schema_name)
+  schemer = make_schemer(s, false)
+  errs = schemer.validate(doc).to_a
+  unless errs.empty?
+    aargh (errs.map { |e| e['error'] }).join("\n")
+    return error_return
+  end
+  dump_result(output, YAML.dump(doc, line_width: 1_000_000), error_return)
 end

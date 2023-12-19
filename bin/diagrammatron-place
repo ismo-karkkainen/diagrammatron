@@ -6,7 +6,6 @@
 
 require_relative '../lib/common'
 require 'optparse'
-require 'yaml'
 require 'set'
 
 
@@ -358,7 +357,7 @@ $QUIET = false
 def main
   input = nil
   output = nil
-  input_schema = 'edges'
+  input_output_schema = 'edges'
   algo = 'tallwide'
   parser = OptionParser.new do |opts|
     opts.summary_indent = '  '
@@ -387,7 +386,7 @@ def main
 Algorithm names are: #{$algorithms.keys.sort.join(' ')}
 
 Input and output YAML file schema is returned by:
-diagrammatron-schema #{input_schema}
+diagrammatron-schema #{input_output_schema}
 
 There can be other fields present but they are ignored and retained.
 
@@ -415,7 +414,7 @@ overlap between sub-diagrams and edges.
   end
   algo = $algorithms[algo]
 
-  doc = load_verified(input, input_schema)
+  doc = load_verified(input, input_output_schema)
   return 2 if doc.nil?
 
   begin
@@ -427,7 +426,7 @@ overlap between sub-diagrams and edges.
 
   algo.call(work)
   prepare_output(doc, work)
-  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+  save_verified(output, doc, 4, input_output_schema)
 end
 
 exit(main) if (defined? $unit_test).nil?

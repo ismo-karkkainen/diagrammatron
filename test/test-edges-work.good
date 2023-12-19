@@ -24,6 +24,11 @@ object at `/nodes/1` is missing required properties: label
 ####ERR
 array size at `/edges/0/between` is less than: 2
 array size at `/edges/2/between` is greater than: 2
+####COMMAND Edge to itself
+####CODE 3
+####OUT
+####ERR
+Edges from node to itself: one (0)
 ####COMMAND Various edges
 ####CODE 0
 ####OUT
@@ -44,9 +49,6 @@ nodes:
 edges:
 - between:
   - one
-  - one
-- between:
-  - one
   - two
   path:
   - xo: 0
@@ -56,4 +58,3 @@ edges:
   sid: 0
 ####ERR
 Note, unconnected labeled nodes: unconnected
-Note, edges from node to itself: 0

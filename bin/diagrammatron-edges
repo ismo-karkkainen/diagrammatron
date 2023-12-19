@@ -6,9 +6,7 @@
 
 require_relative '../lib/common'
 require 'optparse'
-require 'yaml'
 require 'set'
-require 'pathname'
 
 
 def work_copy(src, quiet)
@@ -56,10 +54,14 @@ def work_copy(src, quiet)
     aargh "Edges refer to missing node labels: #{missing.to_a.join(' ')}"
     errors = true
   end
+  unless selfedges.empty?
+    info = selfedges.map { |k| "#{edges[k]['between'].first} (#{k})" }
+    aargh "Edges from node to itself: #{info.join(' ')}"
+    errors = true
+  end
   return nil if errors
   unused = labeled_nodes - edge_nodes
-  [ [ unused.to_a, 'unconnected labeled nodes' ],
-    [ selfedges, 'edges from node to itself' ]
+  [ [ unused.to_a, 'unconnected labeled nodes' ]
   ].each do |x|
     next if quiet || x.first.empty?
     aargh("Note, #{x.last}: #{x.first.join(' ')}")
@@ -753,13 +755,13 @@ There can be other fields present but they are ignored and retained.
   begin
     work = work_copy(doc, quiet)
     return 3 if work.nil?
-  rescue StandardError => e
+  rescue StandardError
     return aargh('Error processing input.', 3)
   end
 
   place_edges(work)
   prepare_output(doc, work)
-  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+  save_verified(output, doc, 4, output_schema)
 end
 
 exit(main) if (defined? $unit_test).nil?

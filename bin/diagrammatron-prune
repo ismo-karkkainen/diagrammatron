@@ -6,7 +6,6 @@
 
 require_relative '../lib/common'
 require 'optparse'
-require 'yaml'
 require 'set'
 
 
@@ -59,6 +58,7 @@ end
 def main
   input = nil
   output = nil
+  input_output_schema = 'nodes'
   keep = false
   ENV['POSIXLY_CORRECT'] = '1' # Leaves patterns as they are.
   parser = OptionParser.new do |opts|
@@ -81,6 +81,8 @@ def main
 Patterns are strings used to create Ruby Regexps.
 
 Input YAML file is expected to be dot_json2diagrammatron output.
+Input and output YAML file schema is returned by:
+diagrammatron-schema #{input_output_schema}
 
 Output is the input file with nodes that have labels that match patterns
 removed or kept depending on options. Edges to removed nodes are removed.
@@ -95,7 +97,7 @@ removed or kept depending on options. Edges to removed nodes are removed.
   rescue StandardError => e
     return aargh("Error creating Regexp: #{e}", 1)
   end
-  doc = load_source(input)
+  doc = load_verified(input, input_output_schema)
   return 2 if doc.nil?
 
   begin
@@ -104,7 +106,7 @@ removed or kept depending on options. Edges to removed nodes are removed.
     return aargh('Error processing input.', 3)
   end
 
-  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+  save_verified(output, doc, 4, input_output_schema)
 end
 
 exit(main) if (defined? $unit_test).nil?

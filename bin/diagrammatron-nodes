@@ -6,7 +6,6 @@
 
 require_relative '../lib/common'
 require 'optparse'
-require 'yaml'
 require 'set'
 
 
@@ -370,6 +369,9 @@ diagrammatron-schema #{input_schema}
 There can be other fields present but they are ignored. The nodes will
 receive values xo and yo that indicate horizontal and vertical coordinates.
 
+Output YAML file schema is returned by:
+diagrammatron-schema #{output_schema}
+
 Output is the input file with 'xo', 'yo' and 'sid' added to each node.
 The 'xo' and 'yo' indicate which unique x- and y-coordinate the value is.
 The 'sid' indicates the sub-diagram consisting of connected nodes.
@@ -396,7 +398,7 @@ The 'sid' indicates the sub-diagram consisting of connected nodes.
 
   algo.call(work)
   prepare_output(doc, work)
-  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+  save_verified(output, doc, 4, output_schema)
 end
 
 exit(main) if (defined? $unit_test).nil?

@@ -68,7 +68,7 @@ edges:
 EOF
 out $?
 
-echo "####COMMAND Various edges"
+echo "####COMMAND Edge to itself"
 $DN > x1 2> x2 <<EOF
 ---
 nodes:
@@ -86,6 +86,27 @@ nodes:
     yo: 0
 edges:
   - between: [ one, one ]
+  - between: [ one, two ]
+EOF
+out $?
+
+echo "####COMMAND Various edges"
+$DN > x1 2> x2 <<EOF
+---
+nodes:
+  - label: one
+    sid: 0
+    xo: 0
+    yo: 0
+  - label: unconnected
+    sid: 1
+    xo: 0
+    yo: 0
+  - label: two
+    sid: 0
+    xo: 1
+    yo: 0
+edges:
   - between: [ one, two ]
 EOF
 out $?
