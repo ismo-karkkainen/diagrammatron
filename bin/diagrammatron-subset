@@ -7,9 +7,8 @@
 require_relative '../lib/common'
 require_relative '../lib/subsets'
 require 'optparse'
-require 'yaml'
 require 'set'
-require 'pathname'
+
 
 class Item
   @@counter = 0
@@ -95,7 +94,7 @@ def gather(work, rules, current, above, set_cache)
 end
 
 def main
-  input_schema = 'nodes'
+  input_output_schema = 'nodes'
   input = nil
   output = nil
   selected = nil
@@ -135,14 +134,15 @@ The select option gives the name of the expression or subset to use.
 Edges to removed nodes are removed. Nodes with all edges removed are retained.
 Output is the input file with remaining nodes and edges.
 
-Input YAML file schema is returned by:
-diagrammatron-schema #{input_schema}
+Input and output YAML file schema is returned by:
+diagrammatron-schema #{input_output_schema}
 
 Rule YAML file schema is returned by:
 diagrammatron-schema subset
 
 Note that input schema is minimal and does not restrict running this program
 at a later stage in the pipeline after other tools have added their fields.
+You can refer to fields outside the schema.
 )
       exit 0
     end
@@ -169,7 +169,7 @@ at a later stage in the pipeline after other tools have added their fields.
     return aargh("Selected #{selected} is not expression or subset name.", 2)
   end
 
-  doc = load_verified(input, input_schema)
+  doc = load_verified(input, input_output_schema)
   return 2 if doc.nil?
 
   begin
@@ -182,7 +182,7 @@ at a later stage in the pipeline after other tools have added their fields.
   chosen = gather(work, rules, selected, [], {})
   return chosen unless chosen.is_a?(Set)
   prepare_output(doc, work, chosen)
-  dump_result(output, YAML.dump(doc, line_width: 1_000_000), 4)
+  save_verified(output, doc, 4, input_output_schema)
 end
 
 exit(main) if (defined? $unit_test).nil?

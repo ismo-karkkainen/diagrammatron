@@ -22,13 +22,16 @@ Only the node names and edge end-point information is used.
 
 # Diagram file contents
 
-In short the diagram file is a YAML file that contains:
+Each program has a schema of input and output file accessible using
+diagrammatron-schema. The schema name is displayed in the help text.
+
+In short initial input diagram file is a YAML file that contains:
 
 ```yaml
 ---
 nodes:
 - label: identifier
-  text: Automatically split to lines, defaults to label, for use in rendering.
+  text: Automatically split to lines, defaults to label, used in rendering.
   url: URL to use as link with text.
   style: style-name
 - label: identifier2
@@ -43,7 +46,7 @@ but different contents.
 
 # Programs
 
-You should call the programs in the following order, as needed.
+The programs are intended to be called in the following order:
 
 * diagrammatron-get extracts template files from the gem.
 * dot_json2diagrammatron converts from dot_json to diagrammtron format.
@@ -52,6 +55,9 @@ You should call the programs in the following order, as needed.
 * diagrammatron-edges places edges within sub-diagrams when nodes are placed.
 * diagrammatron-place places sub-diagrams so that they do not overlap.
 * diagrammatron-render takes the previous output and outputs a file.
+
+In addition you may need to use:
+* diagrammatron-subset
 * diagrammatron-template can combine multiple files into a render template.
 
 Unless you need to make changes, you can pipe the output of previous to the
@@ -70,7 +76,8 @@ local values and providers as uninteresting and clean node labels via:
 diagrammatron-prune -i input.yaml ' provider' ' local.' 'meta.count-boundary' | sed -e 's/.root. //g' -e 's/ .expand.//g' > output.yaml
 ```
 
-All programs are designed to retain the source fields that they do not use.
+All programs retain the source fields that they do not use. Check the schemas
+if you suspect field name collisions.
 
 ## diagrammatron-get
 
@@ -108,7 +115,7 @@ that remain for cleaner output.
 ## diagrammatron-nodes
 
 Finds connected sub-diagrams and assigns nodes locations to "xo" and "yo"
-fields and disjoint sub-graph identifier as "sid". Couple simple algorithms
+fields and disjoint sub-graph identifier to "sid". A couple simple algorithms
 are available. Coordinates indicate the ordering of nodes and not where they
 should actually be located. Disjoint sub-diagrams will be placed on top of
 each other.
@@ -135,7 +142,7 @@ probably result in elongated output from diagrammatron-render.
 ## diagrammatron-render
 
 Takes a template and uses it to produce a file. The template file is in YAML
-format. The internal.yaml provided in this repository produces SVG 1.1 file.
+format. The internal.yaml provided in this repository produces a SVG 1.1 file.
 
 If a node has field named "text", it replaces "label" and is split to multiple
 strings on newline character.
@@ -161,7 +168,7 @@ Each node, edge, and the diagram itself will have all fields in style "default"
 and any styles that are listed in the node or edge copied to each item. The
 template code can expect to find all values present in the node or edge.
 
-A "template" field is an erb-string that is used for final rendering of the
+A "template" field is an ERB string that is used for final rendering of the
 output.
 
 The template file can have top-level fields that start with "base64" in which
@@ -179,6 +186,18 @@ template uses are arbitrary, so you can use anything you like in your own
 templates. Having the default styles contain all needed values with sensible
 values helps keep any default values out of the ERB template itself.
 
+## diagrammatron-subset
+
+This is intended to select a subset of the input diagram. You can define rules
+and expressions for use in the selection, with regular expressions used to
+match given field contents.
+
+The program only removes nodes and edges from the diagram without changing
+contents otherwise. It can be run at any stage. For example, you can select a
+subset before placing nodes and edges to obtain a smaller diagram, or select
+the subset afterwards to keep everything in the place it was in the full
+diagram.
+
 ## diagrammatron-template
 
 This is a convenience script that can be used to combine files into a single
@@ -195,10 +214,10 @@ is obtained.
 
 Splitting the source into multiple files may be convenient during development
 as you can have access to e.g. syntax highlighting for ERB or Ruby snippets.
-In case of the template-field value, which is treated as an ERB-template,
+In case of the template-field value, which is treated as an ERB template,
 it may be simpler to put pure Ruby code into another template field, and
 eval it using "$render.exposed_binding", keeping most of the source out of the
-ERB-template.
+ERB template.
 
 The file internal.yaml used in examples is created from root.yaml and
 svg_1.1.erb by running (first extract the files using diagrammatron-get):
@@ -211,7 +230,9 @@ The internal.yaml SVG 1.1 template is provided mainly for convenience.
 
 # Requirements
 
-You need Ruby 2.7 or newer. Only standard library packages are used.
+You need Ruby 3.0 or newer. Gemfile contains development-time requirements.
+Originally developed for Ruby 2.7 so probably runs on it but not tested for
+it anymore.
 
 # Testing and installing
 
