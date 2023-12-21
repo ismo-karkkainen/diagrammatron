@@ -50,7 +50,7 @@ def main
       output = filename
     end
     opts.on('-l', '--list', 'List available schemas and exit.') do
-      $stdout.puts list_schemas.join("\n")
+      $stdout.puts list_schemas.sort.join("\n")
       exit 0
     end
     opts.on('-h', '--help', 'Print this help and exit.') do
