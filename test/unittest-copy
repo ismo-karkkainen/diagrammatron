@@ -1,0 +1,110 @@
+#!/usr/bin/env ruby
+
+# Copyright 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require './unittest.rb'
+
+$unit_test = 0
+load '../bin/diagrammatron-copy'
+$QUIET = true
+
+$context = 'make_dst2src'
+d2s = make_dst2src([])
+assert(d2s.empty?, true, 'Empty map')
+a = %w[src dst]
+d2s = make_dst2src(a)
+assert(d2s.size, 1, 'Size 1')
+assert(d2s.fetch(a.last, ''), a.first, 'dst mapped to src')
+a = %w[src dst src2 dst]
+d2s = make_dst2src(a)
+assert(d2s.size, 1, 'Overwriting size 1')
+assert(d2s.fetch(a[3], ''), a[2], 'dst mapped to src')
+a = %w[src dst src2 dst2 src3 dst3]
+d2s = make_dst2src(a)
+assert(d2s.size, 3, 'Size 3')
+(0...a.size).step(2) do |k|
+  assert(d2s.fetch(a[k + 1], ''), a[k], "#{k + 1} mapped to #{k}")
+end
+a = %w[src dst src2 dst2 src dst3]
+d2s = make_dst2src(a)
+assert(d2s.size, 3, 'Size 3')
+(0...a.size).step(2) do |k|
+  assert(d2s.fetch(a[k + 1], ''), a[k], "#{k + 1} mapped to #{k}")
+end
+
+$context = 'invert'
+d2s = make_dst2src([])
+s2d = invert(d2s)
+assert(s2d.empty?, true, 'Empty to empty')
+a = %w[src dst]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+assert(s2d.size, 1, 'Inverted size 1')
+assert(s2d.fetch(a.first, []).size, 1, 'src mapped to 1 dst')
+assert(s2d.fetch(a.first, []).first, a.last, 'src mapped to dst')
+a = %w[src dst src2 dst]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+assert(s2d.size, 1, 'Inverted overwriting size 1')
+assert(s2d.key?(a[0]), false, 'No overwritten source')
+assert(s2d.fetch(a[2], []).size, 1, 'src2 mapped to 1 dst')
+assert(s2d.fetch(a[2], []).first, a[3], 'src2 mapped to dst')
+a = %w[src dst src2 dst2 src3 dst3]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+assert(s2d.size, 3, 'Inverted size 3')
+(0...a.size).step(2) do |k|
+  assert(s2d.fetch(a[k], []).size, 1, "#{k} mapped to 1 dst")
+  assert(s2d.fetch(a[k], []).first, a[k + 1], "#{k} mapped to #{k + 1}")
+end
+a = %w[src dst src2 dst2 src dst3]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+assert(s2d.size, 2, 'Inverted size 2')
+assert(s2d.fetch(a[0], []).size, 2, 'src mapped to multiple')
+assert(s2d.fetch(a[0], []).include?(a[1]), true, 'src mapped to 1')
+assert(s2d.fetch(a[0], []).include?(a[5]), true, 'src mapped to 5')
+assert(s2d.fetch(a[2], []).size, 1, 'src2 mapped to single')
+assert(s2d.fetch(a[2], []).include?(a[3]), true, 'src2 mapped to 3')
+
+$context = 'gather_values'
+v = gather_values({ 'src' => 'value' }, {})
+assert(v.empty?, true, 'No values')
+v = gather_values({ 'src' => 'value' }, { 'miss' => [ 'dud' ] })
+assert(v.empty?, true, 'No overlap')
+item = { 'src' => 'value' }
+v = gather_values(item, { item.keys.first => [ 'dst' ] })
+assert(v.size, 1, 'One value')
+assert(v[item.keys.first], item[item.keys.first], 'Value copied')
+v = gather_values(item, { item.keys.first => [ 'dst' ], 'miss' => [ 'dst2' ] })
+assert(v.size, 1, 'Still one value')
+assert(v[item.keys.first], item[item.keys.first], 'Value still copied')
+item = { 'src' => 'value', 'src2' => 'value2' }
+v = gather_values(item, { item.keys.first => [ 'dst' ] })
+assert(v.size, 1, 'No extra values')
+assert(v[item.keys.first], item[item.keys.first], 'Correct value copied')
+
+$context = 'copy_fields'
+c = copy_fields({ 'src' => 'value' }, {})
+assert(c.empty?, true, 'Empty copy')
+item = { 'src' => 'value', 'src2' => 'value2' }
+a = %w[src dst src2 dst2 src3 dst3]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+c = copy_fields(item, s2d)
+assert(c.size, 2, 'Copied 2')
+assert(c.fetch(a[1], ''), item[a[0]], "Copied #{a[1]}")
+assert(c.fetch(a[3], ''), item[a[2]], "Copied #{a[3]}")
+assert(c.key?(a[5]), false, "No #{a[5]}")
+item = { 'src' => 'value', 'src2' => 'value2', 'extra' => 'v' }
+a = %w[src dst src2 dst2 src dst3]
+d2s = make_dst2src(a)
+s2d = invert(d2s)
+c = copy_fields(item, s2d)
+assert(c.size, 3, 'Copied 3')
+assert(c.fetch(a[1], ''), item[a[0]], "Copied #{a[1]}")
+assert(c.fetch(a[3], ''), item[a[2]], "Copied #{a[3]}")
+assert(c.fetch(a[5], ''), item[a[4]], "Copied #{a[5]}")
+
+exit $unit_test

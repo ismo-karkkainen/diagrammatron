@@ -1,0 +1,15 @@
+type: object
+properties:
+  edges:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      type: object
+  nodes:
+    type: array
+    minItems: 0
+    default: []
+    items:
+      type: object
+additionalProperties: true

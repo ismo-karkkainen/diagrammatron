@@ -4,7 +4,7 @@ require 'rake'
 
 Gem::Specification.new do |s|
   s.name        = 'diagrammatron'
-  s.version     = '0.5.1'
+  s.version     = '0.5.2'
   s.summary     = 'Generates diagrams from input graph.'
   s.description = %q(
 Generates diagrams in SVG format from input material. Split into multiple
@@ -13,6 +13,7 @@ programs that each perform one stage.
   s.authors     = [ 'Ismo Kärkkäinen' ]
   s.email       = 'ismokarkkainen@icloud.com'
   s.files       = FileList[ 'lib/*.rb', 'lib/*.yaml', 'LICENSE.txt', 'template/*.yaml', 'template/*.erb' ]
+  s.executables << 'diagrammatron-copy'
   s.executables << 'diagrammatron-get'
   s.executables << 'diagrammatron-edges'
   s.executables << 'diagrammatron-nodes'

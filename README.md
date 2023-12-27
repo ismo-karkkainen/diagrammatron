@@ -7,6 +7,7 @@ This is a small collection to programs to do the following:
 - Place edges between the nodes.
 - Place separate sub-diagrams so that they do not overlap.
 - Select a subset of the diagram.
+- Copy edge/node fields to different name in the same edge/node.
 - Turn the resulting graph into a graphics file for viewing.
 - A helper script to make it easier to construct templates for conversion.
 
@@ -197,6 +198,21 @@ contents otherwise. It can be run at any stage. For example, you can select a
 subset before placing nodes and edges to obtain a smaller diagram, or select
 the subset afterwards to keep everything in the place it was in the full
 diagram.
+
+## diagrammatron-copy
+
+This is intended for case where you use diagrammatron-subset and you want to
+apply different styles, for example, in the ub-iagram that gets generated. You
+can add the sub-diagram styles under a different field name, and use this to
+copy the field to the style field that the rendering template expects to be
+present.
+
+The original fields remain. Source and destination field names are passed as
+pairs on the command-line. First all source values are gathered, and then
+written to destination fields, so you can move original field value to a new
+field or swap field values. Copies are not chained, so if you want to copy a
+source field to multiple destination fields, specify the same source multiple
+times with different destination each time. Missing source fields are ignored.
 
 ## diagrammatron-template
 

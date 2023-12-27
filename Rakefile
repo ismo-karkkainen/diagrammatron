@@ -20,7 +20,7 @@ task install: [:gem] do
 end
 
 desc 'Test.'
-task test: %i[testcommon testsubset testsubsets testnodes testedges testplace testprune testrender testtemplate testget] do
+task test: %i[testcommon testsubset testsubsets testnodes testedges testplace testprune testrender testtemplate testget testcopy] do
 end
 
 desc 'Test nodes.'
@@ -56,6 +56,11 @@ end
 desc 'Test get.'
 task :testget do
   sh './runtest.sh get'
+end
+
+desc 'Test copy.'
+task :testcopy do
+  sh './runtest.sh copy'
 end
 
 desc 'Test common library.'

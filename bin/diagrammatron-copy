@@ -1,0 +1,103 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Copyright © 2023 Ismo Kärkkäinen
+# Licensed under Universal Permissive License. See LICENSE.txt.
+
+require_relative '../lib/common'
+require 'optparse'
+
+def make_dst2src(args)
+  dst2src = {}
+  (0...args.size).step(2) do |sidx|
+    src = args[sidx]
+    dst = args[sidx + 1]
+    dst2src[dst] = src
+  end
+  dst2src
+end
+
+def invert(dst2src)
+  src2dst = {}
+  dst2src.each do |dst, src|
+    src2dst[src] = src2dst.fetch(src, []).push(dst)
+  end
+  src2dst
+end
+
+def gather_values(item, src2dst)
+  vals = {}
+  src2dst.each_key do |src|
+    v = item.fetch(src, nil)
+    vals[src] = v unless v.nil?
+  end
+  vals
+end
+
+def copy_fields(item, src2dst)
+  vals = gather_values(item, src2dst)
+  copied = {}
+  vals.each do |src, v|
+    src2dst[src].each do |dst|
+      copied[dst] = v
+    end
+  end
+  copied
+end
+
+def main
+  input = nil
+  output = nil
+  input_output_schema = 'copy'
+  ENV['POSIXLY_CORRECT'] = '1' # Leaves field name pairs as they are.
+  parser = OptionParser.new do |opts|
+    opts.summary_indent = '  '
+    opts.summary_width = 20
+    opts.banner = 'Usage: diagrammatron-copy [options] source destination ...'
+    opts.separator ''
+    opts.separator 'Options:'
+    opts.on('-i', '--input FILE', 'Input file name. Read from stdin if not given.') do |filename|
+      input = filename
+    end
+    opts.on('-o', '--output FILE', 'Output file name. Write to stdout if not given.') do |filename|
+      output = filename
+    end
+    opts.on('-h', '--help', 'Print this help and exit.') do
+      $stdout.puts %(#{opts}
+Source and destination are field names in pairs.
+
+Input and output YAML file schema is returned by:
+diagrammatron-schema #{input_output_schema}
+
+Output is the input file with fields in nodes and edges copied from source,
+when present, to destination field name. All copies are made at the same
+time, so you can swap field contents, but chaining the copying is not
+supported. In such case, provide the same source field in multiple pairs.
+)
+      exit 0
+    end
+  end
+  parser.parse! ARGV
+
+  return aargh('Field name count is not multiple of 2', 1) if ARGV.size.odd?
+
+  # Same source can be copied to multiple destinations.
+  # Same destination copied to multiple times, last copy remains.
+  # Make destination from source mapping and then invert it for actual use.
+  src2dst = invert(make_dst2src(ARGV))
+
+  doc = load_verified(input, input_output_schema)
+  return 2 if doc.nil?
+
+  %w[edges nodes].each do |category|
+    items = doc.fetch(category, nil)
+    next if items.nil?
+    items.each do |item|
+      copies = copy_fields(item, src2dst)
+      item.merge!(copies)
+    end
+  end
+  save_verified(output, doc, 4, input_output_schema)
+end
+
+exit(main) if (defined? $unit_test).nil?

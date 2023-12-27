@@ -1,0 +1,55 @@
+####COMMAND Unit tests.
+####CODE 0
+####OUT
+ok: make_dst2src: Empty map
+ok: make_dst2src: Size 1
+ok: make_dst2src: dst mapped to src
+ok: make_dst2src: Overwriting size 1
+ok: make_dst2src: dst mapped to src
+ok: make_dst2src: Size 3
+ok: make_dst2src: 1 mapped to 0
+ok: make_dst2src: 3 mapped to 2
+ok: make_dst2src: 5 mapped to 4
+ok: make_dst2src: Size 3
+ok: make_dst2src: 1 mapped to 0
+ok: make_dst2src: 3 mapped to 2
+ok: make_dst2src: 5 mapped to 4
+ok: invert: Empty to empty
+ok: invert: Inverted size 1
+ok: invert: src mapped to 1 dst
+ok: invert: src mapped to dst
+ok: invert: Inverted overwriting size 1
+ok: invert: No overwritten source
+ok: invert: src2 mapped to 1 dst
+ok: invert: src2 mapped to dst
+ok: invert: Inverted size 3
+ok: invert: 0 mapped to 1 dst
+ok: invert: 0 mapped to 1
+ok: invert: 2 mapped to 1 dst
+ok: invert: 2 mapped to 3
+ok: invert: 4 mapped to 1 dst
+ok: invert: 4 mapped to 5
+ok: invert: Inverted size 2
+ok: invert: src mapped to multiple
+ok: invert: src mapped to 1
+ok: invert: src mapped to 5
+ok: invert: src2 mapped to single
+ok: invert: src2 mapped to 3
+ok: gather_values: No values
+ok: gather_values: No overlap
+ok: gather_values: One value
+ok: gather_values: Value copied
+ok: gather_values: Still one value
+ok: gather_values: Value still copied
+ok: gather_values: No extra values
+ok: gather_values: Correct value copied
+ok: copy_fields: Empty copy
+ok: copy_fields: Copied 2
+ok: copy_fields: Copied dst
+ok: copy_fields: Copied dst2
+ok: copy_fields: No dst3
+ok: copy_fields: Copied 3
+ok: copy_fields: Copied dst
+ok: copy_fields: Copied dst2
+ok: copy_fields: Copied dst3
+####ERR
