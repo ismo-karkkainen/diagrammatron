@@ -8,7 +8,7 @@ gem install rubocop json_schemer --no-document
 
 cd $R
 (
-    echo "Build $(cat _logs/commit.txt) on $D Ruby $X at $(date '+%Y-%m-%d %H:%M')"
+    echo "Build $(cat _logs/info.txt) on $D Ruby $X at $(date '+%Y-%m-%d %H:%M')"
     rake test
     echo "Test exit code: $?"
 ) 2>&1 | tee -a "$R/_logs/$D-$X.log"
