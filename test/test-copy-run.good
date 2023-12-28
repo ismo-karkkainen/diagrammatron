@@ -1,0 +1,35 @@
+####COMMAND One node graph
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  dst: one
+####ERR
+####COMMAND Multiple pairs
+####CODE 0
+####OUT
+---
+nodes:
+- label: one
+  src2: source2
+  dst2: source2
+- label: two
+  dst: stays
+- label: three
+  dst2: remains
+edges:
+- between:
+  - one
+  - two
+  src: source
+  dst: source
+- between:
+  - two
+  - three
+  src2: wipes
+  dst2: wipes
+- between:
+  - one
+  - three
+####ERR
