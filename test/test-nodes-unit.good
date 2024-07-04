@@ -58,4 +58,29 @@ ok: find_shortest: First of shortest
 ok: combine: Unchanged
 ok: combine: 1 -> 0
 ok: combine: Unchanged
+ok: work_copy: 4
+ok: work_copy: 1
+ok: work_copy: true
+ok: work_copy: true
+ok: work_copy: 2
+ok: work_copy: 3
+ok: work_copy: 4
+ok: work_copy: true
+ok: work_copy: true
+ok: vertical: 1
+ok: vertical: 0
+ok: vertical: 2
+ok: vertical: 0
+ok: vertical: 1
+ok: vertical: 1
+ok: vertical: 0
+ok: vertical: 0
+ok: horizontal: 0
+ok: horizontal: 1
+ok: horizontal: 0
+ok: horizontal: 2
+ok: horizontal: 1
+ok: horizontal: 1
+ok: horizontal: 0
+ok: horizontal: 0
 ####ERR

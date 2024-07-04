@@ -153,6 +153,7 @@ def segment(x0, y0, x1, y1)
   Segment.new(vert, cc, range, 0, [false, false], 0)
 end
 
+# side_index is 0 up, 1 right, 2 down, 3 left.
 Connection = Struct.new(:node_index, :side_index)
 
 $paths = {}
@@ -576,6 +577,7 @@ def place_edges(work)
     $insignificant = 0.1 / (splits.values.max + 1)
     splits = nil
 
+    # Ordering of segments in gaps between nodes.
     gaps = {
       false => {},
       true => {}

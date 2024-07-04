@@ -178,4 +178,74 @@ assert(work[:nodes][0][:xo] == 0, 'Unchanged', work[:nodes][0])
 assert(work[:nodes][1][:xo] == 0, '1 -> 0', work[:nodes][1])
 assert(work[:nodes][2][:xo] == 1, 'Unchanged', work[:nodes][2])
 
+$context = 'work_copy'
+w = work_copy(YAML.safe_load(%(
+---
+nodes:
+- label: a
+  xo: 1
+- label: b
+  yo: 2
+- label: ab
+  xo: 3
+  yo: 4
+- label: none
+)), true)
+n = w[:nodes]
+assert(n.length, 4, 'All nodes present')
+assert(n[0][:xo], 1, 'xo present in node 1')
+assert(n[0][:yo].nil?, true, 'no yo in node 1')
+assert(n[1][:xo].nil?, true, 'no xo in node 2')
+assert(n[1][:yo], 2, 'yo present in node 2')
+assert(n[2][:xo], 3, 'xo present in node 3')
+assert(n[2][:yo], 4, 'yo present in node 3')
+assert(n[3][:xo].nil?, true, 'no xo in node 4')
+assert(n[3][:yo].nil?, true, 'no yo in node 4')
+
+$context = 'vertical'
+w = work_copy(YAML.safe_load(%(
+---
+nodes:
+- label: a
+  xo: 1
+- label: b
+  xo: 2
+- label: ab
+  xo: 1
+- label: none
+)), true)
+vertical(w)
+n = w[:nodes]
+assert(n[0][:xo], 1, 'Node 0 at xo 1')
+assert(n[0][:yo], 0, 'Node 0 at yo 0')
+assert(n[1][:xo], 2, 'Node 1 at xo 2')
+assert(n[1][:yo], 0, 'Node 1 at yo 0')
+assert(n[2][:xo], 1, 'Node 2 at xo 1')
+assert(n[2][:yo], 1, 'Node 2 at yo 1')
+assert(n[3][:xo], 0, 'Node 3 at xo 0')
+assert(n[3][:yo], 0, 'Node 3 at yo 0')
+
+$context = 'horizontal'
+w = work_copy(YAML.safe_load(%(
+---
+nodes:
+- label: a
+  yo: 1
+- label: b
+  yo: 2
+- label: ab
+  yo: 1
+- label: none
+)), true)
+vertical(w)
+n = w[:nodes]
+assert(n[0][:xo], 0, 'Node 0 at xo 0')
+assert(n[0][:yo], 1, 'Node 0 at yo 1')
+assert(n[1][:xo], 0, 'Node 1 at xo 0')
+assert(n[1][:yo], 2, 'Node 1 at yo 2')
+assert(n[2][:xo], 1, 'Node 2 at xo 1')
+assert(n[2][:yo], 1, 'Node 2 at yo 1')
+assert(n[3][:xo], 0, 'Node 3 at xo 0')
+assert(n[3][:yo], 0, 'Node 3 at yo 0')
+
 exit $unit_test

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Copyright © 2021-2023 Ismo Kärkkäinen
+# Copyright © 2021-2024 Ismo Kärkkäinen
 # Licensed under Universal Permissive License. See LICENSE.txt.
 
 require_relative '../lib/common'
@@ -9,12 +9,27 @@ require 'optparse'
 require 'set'
 
 
-def vertical(work)
+def horizontal(work)
+  count = {}
   work[:nodes].each_index do |k|
     node = work[:nodes][k]
-    node[:xo] = 0
-    node[:yo] = k
+    c = count.fetch(node[:yo], 0)
+    node[:xo] = c
+    node[:yo] = 0 unless node.key?(:yo)
     node[:sid] = 0
+    count[node[:yo]] = c + 1
+  end
+end
+
+def vertical(work)
+  count = {}
+  work[:nodes].each_index do |k|
+    node = work[:nodes][k]
+    c = count.fetch(node[:xo], 0)
+    node[:xo] = 0 unless node.key?(:xo)
+    node[:yo] = c
+    node[:sid] = 0
+    count[node[:xo]] = c + 1
   end
 end
 
@@ -269,7 +284,8 @@ end
 
 $algorithms = {
   'pathlength' => method(:pathlength2coordinates),
-  'vertical' => method(:vertical)
+  'vertical' => method(:vertical),
+  'horizontal' => method(:horizontal)
 }
 
 def work_copy(src, quiet)
@@ -296,6 +312,11 @@ def work_copy(src, quiet)
   nodes.each_index do |k|
     work[:nodes].push({ idx: k })
     node = nodes[k]
+    # Retain xo, yo if present.
+    %i[xo yo].each do |s|
+      sk = s.to_s
+      work[:nodes].last[s] = node[sk] if node.key?(sk)
+    end
     label = node['label']
     if label2idx.key?(label) && edge_nodes.member?(label)
       aargh "Edge-referred label used twice: #{label}"
@@ -361,7 +382,7 @@ def main
     opts.on('-h', '--help', 'Print this help and exit.') do
       $stdout.puts opts
       $stdout.puts %(
-Algorithm names are: #{$algorithms.keys.sort.join(' ')}
+Algorithm names are: #{$algorithms.keys.sort!.join(' ')}
 
 Input YAML file schema is returned by:
 diagrammatron-schema #{input_schema}

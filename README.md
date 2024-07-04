@@ -116,10 +116,13 @@ that remain for cleaner output.
 ## diagrammatron-nodes
 
 Finds connected sub-diagrams and assigns nodes locations to "xo" and "yo"
-fields and disjoint sub-graph identifier to "sid". A couple simple algorithms
+fields and disjoint sub-graph identifier to "sid". A few simple algorithms
 are available. Coordinates indicate the ordering of nodes and not where they
 should actually be located. Disjoint sub-diagrams will be placed on top of
 each other.
+
+For algorithm "vertical", field "xo" is retained. For algorithm "horizontal",
+field "yo" is retained. Both should have integer value.
 
 ## diagrammatron-edges
 
@@ -270,6 +273,6 @@ Test build logs can be found in [ismo-kärkkäinen.fi/diagrammatron](https://xn-
 
 # License
 
-Copyright © 2021-2023 Ismo Kärkkäinen
+Copyright © 2021-2024 Ismo Kärkkäinen
 
 Licensed under Universal Permissive License. See LICENSE.txt.
